@@ -16,6 +16,39 @@
     <strong>🔔 Live Update:</strong> <span id="notification-text"></span>
 </div>
 
+<!-- Search & Filter Form -->
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <form asp-action="Index" method="get" class="row g-2">
+            <div class="col-md-4">
+                <input type="text" name="searchString" value="@ViewBag.SearchString"
+                       class="form-control" placeholder="Search by title or description..." />
+            </div>
+            <div class="col-md-3">
+                <select name="status" class="form-control">
+                    <option value="">-- All Statuses --</option>
+                    <option value="0" selected="@(ViewBag.Status == PropertyLeasingAPI.Models.MaintenanceStatus.Pending)">Pending</option>
+                    <option value="1" selected="@(ViewBag.Status == PropertyLeasingAPI.Models.MaintenanceStatus.InProgress)">In Progress</option>
+                    <option value="2" selected="@(ViewBag.Status == PropertyLeasingAPI.Models.MaintenanceStatus.Completed)">Completed</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select name="category" class="form-control">
+                    <option value="">-- All Categories --</option>
+                    <option value="0" selected="@(ViewBag.Category == PropertyLeasingAPI.Models.MaintenanceCategory.Plumbing)">Plumbing</option>
+                    <option value="1" selected="@(ViewBag.Category == PropertyLeasingAPI.Models.MaintenanceCategory.Electrical)">Electrical</option>
+                    <option value="2" selected="@(ViewBag.Category == PropertyLeasingAPI.Models.MaintenanceCategory.HVAC)">HVAC</option>
+                    <option value="3" selected="@(ViewBag.Category == PropertyLeasingAPI.Models.MaintenanceCategory.General)">General</option>
+                </select>
+            </div>
+            <div class="col-md-2 d-flex gap-2">
+                <button type="submit" class="btn btn-danger w-100">Search</button>
+                <a asp-action="Index" class="btn btn-outline-secondary w-100">Clear</a>
+            </div>
+        </form>
+    </div>
+</div>
+
 <div class="card shadow-sm">
     <div class="card-body p-0">
         <table class="table table-hover mb-0" id="maintenance-table">
@@ -80,20 +113,17 @@
             .build();
 
         connection.on("ReceiveStatusUpdate", function (requestId, status, title) {
-            // Update the badge in the table if the row exists
             const badge = document.getElementById("status-" + requestId);
             if (badge) {
                 badge.innerText = status;
                 badge.className = "badge " + getStatusClass(status);
             }
 
-            // Show notification
             const notification = document.getElementById("signalr-notification");
             const text = document.getElementById("notification-text");
             text.innerText = '"' + title + '" status changed to ' + status;
             notification.classList.remove("d-none");
 
-            // Hide notification after 5 seconds
             setTimeout(() => notification.classList.add("d-none"), 5000);
         });
 

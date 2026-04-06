@@ -24,11 +24,28 @@ namespace PropertyLeasingMVC.Controllers
         }
 
         // GET: MaintenanceRequests
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(string? searchString, MaintenanceStatus? status, MaintenanceCategory? category)
         {
             var requests = _context.MaintenanceRequests
                 .Include(m => m.Property)
-                .Include(m => m.Tenant);
+                .Include(m => m.Tenant)
+                .AsQueryable();
+
+            if (!string.IsNullOrEmpty(searchString))
+                requests = requests.Where(m =>
+                    m.Title.Contains(searchString) ||
+                    m.Description.Contains(searchString));
+
+            if (status.HasValue)
+                requests = requests.Where(m => m.Status == status);
+
+            if (category.HasValue)
+                requests = requests.Where(m => m.Category == category);
+
+            ViewBag.SearchString = searchString;
+            ViewBag.Status = status;
+            ViewBag.Category = category;
+
             return View(await requests.ToListAsync());
         }
 

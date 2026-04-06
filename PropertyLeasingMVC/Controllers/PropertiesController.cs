@@ -22,9 +22,27 @@ namespace PropertyLeasingMVC.Controllers
         }
 
         // GET: Properties
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(string? searchString, PropertyStatus? status, PropertyType? type)
         {
-            return View(await _context.Properties.ToListAsync());
+            var properties = _context.Properties.AsQueryable();
+
+            if (!string.IsNullOrEmpty(searchString))
+                properties = properties.Where(p =>
+                    p.Address.Contains(searchString) ||
+                    p.City.Contains(searchString) ||
+                    p.Description!.Contains(searchString));
+
+            if (status.HasValue)
+                properties = properties.Where(p => p.Status == status);
+
+            if (type.HasValue)
+                properties = properties.Where(p => p.PropertyType == type);
+
+            ViewBag.SearchString = searchString;
+            ViewBag.Status = status;
+            ViewBag.Type = type;
+
+            return View(await properties.ToListAsync());
         }
 
         // GET: Properties/Details/5
