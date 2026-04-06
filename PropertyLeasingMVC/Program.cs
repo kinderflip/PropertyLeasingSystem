@@ -1,13 +1,14 @@
-using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using PropertyLeasingAPI.Data;
 using PropertyLeasingAPI.Models;
+using PropertyLeasingMVC.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add MVC
 builder.Services.AddControllersWithViews();
-
+builder.Services.AddSignalR();
 // Add DbContext - same database as API
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -90,7 +91,7 @@ app.UseStaticFiles();
 app.UseRouting();
 app.UseAuthentication();   
 app.UseAuthorization();
-
+app.MapHub<MaintenanceHub>("/maintenanceHub");
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");

@@ -1,13 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using PropertyLeasingAPI.Data;
 using PropertyLeasingAPI.Models;
-using Microsoft.AspNetCore.Authorization;
+using PropertyLeasingMVC.Hubs;
 
 namespace PropertyLeasingMVC.Controllers
 {
@@ -15,10 +13,14 @@ namespace PropertyLeasingMVC.Controllers
     public class MaintenanceRequestsController : Controller
     {
         private readonly AppDbContext _context;
+        private readonly IHubContext<MaintenanceHub> _hubContext;
 
-        public MaintenanceRequestsController(AppDbContext context)
+        public MaintenanceRequestsController(
+            AppDbContext context,
+            IHubContext<MaintenanceHub> hubContext)
         {
             _context = context;
+            _hubContext = hubContext;
         }
 
         // GET: MaintenanceRequests
@@ -66,6 +68,14 @@ namespace PropertyLeasingMVC.Controllers
                 maintenanceRequest.Status = MaintenanceStatus.Pending;
                 _context.Add(maintenanceRequest);
                 await _context.SaveChangesAsync();
+
+                // Notify all clients via SignalR
+                await _hubContext.Clients.All.SendAsync(
+                    "ReceiveStatusUpdate",
+                    maintenanceRequest.RequestId,
+                    "Pending",
+                    maintenanceRequest.Title);
+
                 TempData["SuccessMessage"] = "Maintenance request submitted successfully!";
                 return RedirectToAction(nameof(Index));
             }
@@ -100,7 +110,6 @@ namespace PropertyLeasingMVC.Controllers
             {
                 try
                 {
-                    // Auto set resolved date when completed
                     if (maintenanceRequest.Status == MaintenanceStatus.Completed
                         && maintenanceRequest.DateResolved == null)
                     {
@@ -109,6 +118,14 @@ namespace PropertyLeasingMVC.Controllers
 
                     _context.Update(maintenanceRequest);
                     await _context.SaveChangesAsync();
+
+                    // Notify all clients via SignalR
+                    await _hubContext.Clients.All.SendAsync(
+                        "ReceiveStatusUpdate",
+                        maintenanceRequest.RequestId,
+                        maintenanceRequest.Status.ToString(),
+                        maintenanceRequest.Title);
+
                     TempData["SuccessMessage"] = "Maintenance request updated successfully!";
                 }
                 catch (DbUpdateConcurrencyException)
