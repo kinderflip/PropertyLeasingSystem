@@ -1,77 +1,109 @@
 ﻿@model IEnumerable<PropertyLeasingAPI.Models.MaintenanceRequest>
-
 @{
-    ViewData["Title"] = "Index";
+    ViewData["Title"] = "Maintenance Requests";
 }
 
-<h1>Index</h1>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>🔧 Maintenance Requests</h2>
+    @if (User.IsInRole("PropertyManager") || User.IsInRole("Tenant"))
+    {
+        <a asp-action="Create" class="btn btn-danger">+ New Request</a>
+    }
+</div>
 
-<p>
-    <a asp-action="Create">Create New</a>
-</p>
-<table class="table">
-    <thead>
-        <tr>
-            <th>
-                @Html.DisplayNameFor(model => model.Title)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Description)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Category)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Status)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.DateSubmitted)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.DateResolved)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Property)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Tenant)
-            </th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-@foreach (var item in Model) {
-        <tr>
-            <td>
-                @Html.DisplayFor(modelItem => item.Title)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Description)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Category)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Status)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.DateSubmitted)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.DateResolved)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Property.Address)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Tenant.Email)
-            </td>
-            <td>
-                <a asp-action="Edit" asp-route-id="@item.RequestId">Edit</a> |
-                <a asp-action="Details" asp-route-id="@item.RequestId">Details</a> |
-                <a asp-action="Delete" asp-route-id="@item.RequestId">Delete</a>
-            </td>
-        </tr>
+<!-- Live update notification area -->
+<div id="signalr-notification" class="alert alert-info d-none" role="alert">
+    <strong>🔔 Live Update:</strong> <span id="notification-text"></span>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0" id="maintenance-table">
+            <thead class="table-dark">
+                <tr>
+                    <th>Title</th>
+                    <th>Property</th>
+                    <th>Tenant</th>
+                    <th>Category</th>
+                    <th>Status</th>
+                    <th>Date Submitted</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model)
+                {
+                    <tr id="row-@item.RequestId">
+                        <td>@item.Title</td>
+                        <td>@item.Property?.Address</td>
+                        <td>@item.Tenant?.FullName</td>
+                        <td>@item.Category</td>
+                        <td>
+                            <span class="badge @(item.Status == PropertyLeasingAPI.Models.MaintenanceStatus.Pending ? "bg-warning" :
+                                                                                 item.Status == PropertyLeasingAPI.Models.MaintenanceStatus.InProgress ? "bg-info" :
+                                                                                 "bg-success")"
+                              id="status-@item.RequestId">
+                            @item.Status
+                        </span>
+                    </td>
+                    <td>@item.DateSubmitted.ToString("dd MMM yyyy")</td>
+                    <td>
+                        <a asp-action="Details" asp-route-id="@item.RequestId"
+                           class="btn btn-sm btn-outline-primary">Details</a>
+                        @if (User.IsInRole("PropertyManager") || User.IsInRole("MaintenanceStaff"))
+                            {
+                                <a asp-action="Edit" asp-route-id="@item.RequestId"
+                                   class="btn btn-sm btn-outline-warning">Edit</a>
+                            }
+                            @if (User.IsInRole("PropertyManager"))
+                            {
+                                <a asp-action="Delete" asp-route-id="@item.RequestId"
+                                   class="btn btn-sm btn-outline-danger">Delete</a>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        @if (!Model.Any())
+        {
+            <p class="text-muted text-center py-4">No maintenance requests found.</p>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/lib/microsoft/signalr/dist/browser/signalr.min.js"></script>
+    <script>
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl("/maintenanceHub")
+            .build();
+
+        connection.on("ReceiveStatusUpdate", function (requestId, status, title) {
+            // Update the badge in the table if the row exists
+            const badge = document.getElementById("status-" + requestId);
+            if (badge) {
+                badge.innerText = status;
+                badge.className = "badge " + getStatusClass(status);
+            }
+
+            // Show notification
+            const notification = document.getElementById("signalr-notification");
+            const text = document.getElementById("notification-text");
+            text.innerText = '"' + title + '" status changed to ' + status;
+            notification.classList.remove("d-none");
+
+            // Hide notification after 5 seconds
+            setTimeout(() => notification.classList.add("d-none"), 5000);
+        });
+
+        function getStatusClass(status) {
+            if (status === "Pending") return "bg-warning";
+            if (status === "InProgress") return "bg-info";
+            if (status === "Completed") return "bg-success";
+            return "bg-secondary";
+        }
+
+        connection.start().catch(err => console.error(err.toString()));
+    </script>
 }
-    </tbody>
-</table>
