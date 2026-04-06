@@ -1,71 +1,105 @@
 ﻿@model IEnumerable<PropertyLeasingAPI.Models.Property>
-
 @{
-    ViewData["Title"] = "Index";
+    ViewData["Title"] = "Properties";
 }
 
-<h1>Index</h1>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>🏠 Properties</h2>
+    @if (User.IsInRole("PropertyManager"))
+    {
+        <a asp-action="Create" class="btn btn-primary">+ Add Property</a>
+    }
+</div>
 
-<p>
-    <a asp-action="Create">Create New</a>
-</p>
-<table class="table">
-    <thead>
-        <tr>
-            <th>
-                @Html.DisplayNameFor(model => model.Address)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.City)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.PropertyType)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Bedrooms)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.MonthlyRent)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Status)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Description)
-            </th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-@foreach (var item in Model) {
-        <tr>
-            <td>
-                @Html.DisplayFor(modelItem => item.Address)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.City)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.PropertyType)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Bedrooms)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.MonthlyRent)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Status)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Description)
-            </td>
-            <td>
-                <a asp-action="Edit" asp-route-id="@item.PropertyId">Edit</a> |
-                <a asp-action="Details" asp-route-id="@item.PropertyId">Details</a> |
-                <a asp-action="Delete" asp-route-id="@item.PropertyId">Delete</a>
-            </td>
-        </tr>
-}
-    </tbody>
-</table>
+<!-- Search & Filter Form -->
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <form asp-action="Index" method="get" class="row g-2">
+            <div class="col-md-4">
+                <input type="text" name="searchString" value="@ViewBag.SearchString"
+                       class="form-control" placeholder="Search by address, city..." />
+            </div>
+            <div class="col-md-3">
+                <select name="status" class="form-control">
+                    <option value="">-- All Statuses --</option>
+                    <option value="0" selected="@(ViewBag.Status == PropertyLeasingAPI.Models.PropertyStatus.Available)">Available</option>
+                    <option value="1" selected="@(ViewBag.Status == PropertyLeasingAPI.Models.PropertyStatus.Leased)">Leased</option>
+                    <option value="2" selected="@(ViewBag.Status == PropertyLeasingAPI.Models.PropertyStatus.UnderMaintenance)">Under Maintenance</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select name="type" class="form-control">
+                    <option value="">-- All Types --</option>
+                    <option value="0" selected="@(ViewBag.Type == PropertyLeasingAPI.Models.PropertyType.Apartment)">Apartment</option>
+                    <option value="1" selected="@(ViewBag.Type == PropertyLeasingAPI.Models.PropertyType.Villa)">Villa</option>
+                    <option value="2" selected="@(ViewBag.Type == PropertyLeasingAPI.Models.PropertyType.Shop)">Shop</option>
+                    <option value="3" selected="@(ViewBag.Type == PropertyLeasingAPI.Models.PropertyType.Office)">Office</option>
+                </select>
+            </div>
+            <div class="col-md-2 d-flex gap-2">
+                <button type="submit" class="btn btn-primary w-100">Search</button>
+                <a asp-action="Index" class="btn btn-outline-secondary w-100">Clear</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Results -->
+<div class="card shadow-sm">
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead class="table-dark">
+                <tr>
+                    <th>Address</th>
+                    <th>City</th>
+                    <th>Type</th>
+                    <th>Bedrooms</th>
+                    <th>Monthly Rent</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model)
+                {
+                    <tr>
+                        <td>@item.Address</td>
+                        <td>@item.City</td>
+                        <td>@item.PropertyType</td>
+                        <td>@item.Bedrooms</td>
+                        <td>BD @item.MonthlyRent.ToString("F2")</td>
+                        <td>
+                            @if (item.Status == PropertyLeasingAPI.Models.PropertyStatus.Available)
+                            {
+                                <span class="badge bg-success">Available</span>
+                            }
+                            else if (item.Status == PropertyLeasingAPI.Models.PropertyStatus.Leased)
+                            {
+                                <span class="badge bg-warning">Leased</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-danger">Under Maintenance</span>
+                            }
+                        </td>
+                        <td>
+                            <a asp-action="Details" asp-route-id="@item.PropertyId"
+                               class="btn btn-sm btn-outline-primary">Details</a>
+                            @if (User.IsInRole("PropertyManager"))
+                            {
+                                <a asp-action="Edit" asp-route-id="@item.PropertyId"
+                                   class="btn btn-sm btn-outline-warning">Edit</a>
+                                <a asp-action="Delete" asp-route-id="@item.PropertyId"
+                                   class="btn btn-sm btn-outline-danger">Delete</a>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        @if (!Model.Any())
+        {
+            <p class="text-muted text-center py-4">No properties found matching your search.</p>
+        }
+    </div>
+</div>
