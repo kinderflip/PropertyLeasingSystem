@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PropertyLeasingAPI.Data;
 using PropertyLeasingAPI.Models;
@@ -7,6 +8,7 @@ namespace PropertyLeasingAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class MaintenanceRequestsController : ControllerBase
     {
         private readonly AppDbContext _context;
@@ -27,6 +29,7 @@ namespace PropertyLeasingAPI.Controllers
         }
 
         // GET: api/MaintenanceRequests/5
+        [AllowAnonymous]
         [HttpGet("{id}")]
         public async Task<ActionResult<MaintenanceRequest>> GetMaintenanceRequest(int id)
         {
