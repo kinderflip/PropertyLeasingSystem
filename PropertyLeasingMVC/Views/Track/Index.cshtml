@@ -1,0 +1,38 @@
+﻿@{
+    ViewData["Title"] = "Track Maintenance Request";
+}
+
+<div class="row justify-content-center mt-5">
+    <div class="col-md-6">
+        <div class="card shadow">
+            <div class="card-header bg-dark text-white text-center py-4">
+                <h3>🔍 Track Maintenance Request</h3>
+                <p class="mb-0 text-muted">Enter your request ID to check its status</p>
+            </div>
+            <div class="card-body p-4">
+
+                @if (ViewBag.Error != null)
+                {
+                    <div class="alert alert-danger">
+                        <strong>⚠️</strong> @ViewBag.Error
+                    </div>
+                }
+
+                <form asp-action="Index" method="post">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Request ID</label>
+                        <input type="number" name="requestId" class="form-control form-control-lg"
+                               placeholder="e.g. 1" min="1" required />
+                        <small class="text-muted">Your request ID was provided when you submitted your request.</small>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-dark btn-lg">Track Request</button>
+                    </div>
+                </form>
+            </div>
+            <div class="card-footer text-center">
+                <small class="text-muted">No login required — this page is publicly accessible</small>
+            </div>
+        </div>
+    </div>
+</div>

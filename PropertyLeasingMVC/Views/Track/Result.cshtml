@@ -1,0 +1,60 @@
+﻿@model PropertyLeasingMVC.Controllers.TrackingResult
+@{
+    ViewData["Title"] = "Request Status";
+}
+
+<div class="row justify-content-center mt-5">
+    <div class="col-md-7">
+        <div class="card shadow">
+            <div class="card-header bg-dark text-white text-center py-3">
+                <h4>🔧 Maintenance Request #@Model.RequestId</h4>
+            </div>
+            <div class="card-body p-4">
+
+                <!-- Status Badge -->
+                <div class="text-center mb-4">
+                    @if (Model.Status == "Pending")
+                    {
+                        <span class="badge bg-warning text-dark fs-5 px-4 py-2">⏳ Pending</span>
+                    }
+                    else if (Model.Status == "InProgress")
+                    {
+                        <span class="badge bg-info fs-5 px-4 py-2">🔨 In Progress</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-success fs-5 px-4 py-2">✅ Completed</span>
+                    }
+                </div>
+
+                <table class="table table-bordered">
+                    <tr>
+                        <th class="bg-light w-40">Title</th>
+                        <td>@Model.Title</td>
+                    </tr>
+                    <tr>
+                        <th class="bg-light">Category</th>
+                        <td>@Model.Category</td>
+                    </tr>
+                    <tr>
+                        <th class="bg-light">Property</th>
+                        <td>@Model.PropertyAddress, @Model.PropertyCity</td>
+                    </tr>
+                    <tr>
+                        <th class="bg-light">Date Submitted</th>
+                        <td>@Model.DateSubmitted</td>
+                    </tr>
+                    <tr>
+                        <th class="bg-light">Date Resolved</th>
+                        <td>@Model.DateResolved</td>
+                    </tr>
+                </table>
+
+            </div>
+            <div class="card-footer text-center">
+                <a asp-action="Index" class="btn btn-outline-dark">🔍 Track Another Request</a>
+                <a asp-controller="Home" asp-action="Index" class="btn btn-outline-secondary ms-2">🏠 Home</a>
+            </div>
+        </div>
+    </div>
+</div>
