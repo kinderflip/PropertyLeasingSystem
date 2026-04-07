@@ -6,13 +6,10 @@ using Microsoft.OpenApi.Models;
 using PropertyLeasingAPI.Data;
 using PropertyLeasingAPI.Models;
 using System.Text;
-
 var builder = WebApplication.CreateBuilder(args);
-
 // Add services
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-
 // Swagger with JWT support
 builder.Services.AddSwaggerGen(c =>
 {
@@ -40,16 +37,17 @@ builder.Services.AddSwaggerGen(c =>
         }
     });
 });
-
 // Add DbContext
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
-
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"),
+        sqlOptions => sqlOptions.EnableRetryOnFailure(
+            maxRetryCount: 5,
+            maxRetryDelay: TimeSpan.FromSeconds(30),
+            errorNumbersToAdd: null)));
 // Add Identity
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
     .AddEntityFrameworkStores<AppDbContext>()
     .AddDefaultTokenProviders();
-
 // Add JWT Authentication
 builder.Services.AddAuthentication(options =>
 {
@@ -70,28 +68,24 @@ builder.Services.AddAuthentication(options =>
             Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!))
     };
 });
-
 builder.Services.AddAuthorization();
-
 // Allow CORS for MVC app to call API
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowMVC", policy =>
     {
-        policy.WithOrigins("https://localhost:7133", "http://localhost:5133")
+        policy.WithOrigins(
+                "https://localhost:7133",
+                "http://localhost:5133",
+                "https://propertyleasing-mvc-gmhxb7bba2a6g4av.westeurope-01.azurewebsites.net",
+                "https://propertyleasing-reports-h3e9euhja6dbdffp.westeurope-01.azurewebsites.net")
               .AllowAnyHeader()
               .AllowAnyMethod();
     });
 });
-
 var app = builder.Build();
-
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
-
+app.UseSwagger();
+app.UseSwaggerUI();
 app.UseHttpsRedirection();
 app.UseCors("AllowMVC");
 app.UseAuthentication();
