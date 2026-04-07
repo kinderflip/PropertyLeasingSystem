@@ -42,6 +42,34 @@ namespace PropertyLeasingAPI.Controllers
             return request;
         }
 
+        // GET: api/MaintenanceRequests/track/5 - Public, no auth required
+        [AllowAnonymous]
+        [HttpGet("track/{id}")]
+        public async Task<ActionResult<object>> TrackRequest(int id)
+        {
+            var request = await _context.MaintenanceRequests
+                .Include(m => m.Property)
+                .Include(m => m.Tenant)
+                .FirstOrDefaultAsync(m => m.RequestId == id);
+
+            if (request == null)
+                return NotFound(new { message = "No maintenance request found with that ID." });
+
+            return Ok(new
+            {
+                requestId = request.RequestId,
+                title = request.Title,
+                category = request.Category.ToString(),
+                status = request.Status.ToString(),
+                dateSubmitted = request.DateSubmitted.ToString("dd MMM yyyy"),
+                dateResolved = request.DateResolved.HasValue
+                    ? request.DateResolved.Value.ToString("dd MMM yyyy")
+                    : "Not resolved yet",
+                propertyAddress = request.Property?.Address,
+                propertyCity = request.Property?.City
+            });
+        }
+
         // GET: api/MaintenanceRequests/pending
         [HttpGet("pending")]
         public async Task<ActionResult<IEnumerable<MaintenanceRequest>>> GetPendingRequests()
@@ -70,7 +98,6 @@ namespace PropertyLeasingAPI.Controllers
         {
             if (id != request.RequestId) return BadRequest();
 
-            // If being marked as completed, set resolved date
             if (request.Status == MaintenanceStatus.Completed && request.DateResolved == null)
                 request.DateResolved = DateTime.Now;
 

@@ -9,6 +9,13 @@ var builder = WebApplication.CreateBuilder(args);
 // Add MVC
 builder.Services.AddControllersWithViews();
 builder.Services.AddSignalR();
+
+
+
+builder.Services.AddHttpClient("PropertyAPI", client =>
+{
+    client.BaseAddress = new Uri("https://localhost:7121/");
+});
 // Add DbContext - same database as API
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
