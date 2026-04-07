@@ -1,0 +1,75 @@
+﻿@model List<PropertyLeasingReports.Models.LeaseReport>
+@{
+    ViewData["Title"] = "Leases Report";
+    var statusNames = new[] { "Active", "Expired", "Terminated" };
+    var statusColors = new[] { "success", "secondary", "danger" };
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>📋 Leases Report</h2>
+    <span class="text-muted">Total: @Model.Count leases</span>
+</div>
+
+<!-- Summary Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card bg-success text-white text-center shadow-sm">
+            <div class="card-body">
+                <h2>@Model.Count(l => l.Status == 0)</h2>
+                <p class="mb-0">Active</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card bg-secondary text-white text-center shadow-sm">
+            <div class="card-body">
+                <h2>@Model.Count(l => l.Status == 1)</h2>
+                <p class="mb-0">Expired</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card bg-danger text-white text-center shadow-sm">
+            <div class="card-body">
+                <h2>@Model.Count(l => l.Status == 2)</h2>
+                <p class="mb-0">Terminated</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead class="table-dark">
+                <tr>
+                    <th>#</th>
+                    <th>Property ID</th>
+                    <th>Tenant ID</th>
+                    <th>Start Date</th>
+                    <th>End Date</th>
+                    <th>Monthly Rent</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model)
+                {
+                    <tr>
+                        <td>@item.LeaseId</td>
+                        <td>@item.PropertyId</td>
+                        <td>@item.TenantId</td>
+                        <td>@item.StartDate.ToString("dd MMM yyyy")</td>
+                        <td>@item.EndDate.ToString("dd MMM yyyy")</td>
+                        <td>BD @item.MonthlyRent.ToString("F2")</td>
+                        <td>
+                            <span class="badge bg-@statusColors[item.Status]">
+                                @statusNames[item.Status]
+                            </span>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
