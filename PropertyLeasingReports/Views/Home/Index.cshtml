@@ -1,8 +1,44 @@
 ﻿@{
-    ViewData["Title"] = "Home Page";
+    ViewData["Title"] = "Reports Dashboard";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<div class="text-center mb-5 mt-3">
+    <h2>📊 Property Leasing — Reports Portal</h2>
+    <p class="text-muted">Select a report to view</p>
+</div>
+
+<div class="row g-4 justify-content-center">
+    <div class="col-md-3">
+        <div class="card shadow text-center h-100">
+            <div class="card-body p-4">
+                <h1>🏠</h1>
+                <h5 class="card-title">Properties Report</h5>
+                <p class="text-muted small">View all properties with status and rent details</p>
+                <a asp-controller="Reports" asp-action="Properties"
+                   class="btn btn-primary w-100">View Report</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card shadow text-center h-100">
+            <div class="card-body p-4">
+                <h1>🔧</h1>
+                <h5 class="card-title">Maintenance Report</h5>
+                <p class="text-muted small">View all maintenance requests and their status</p>
+                <a asp-controller="Reports" asp-action="Maintenance"
+                   class="btn btn-danger w-100">View Report</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card shadow text-center h-100">
+            <div class="card-body p-4">
+                <h1>📋</h1>
+                <h5 class="card-title">Leases Report</h5>
+                <p class="text-muted small">View all leases with dates and monthly rent</p>
+                <a asp-controller="Reports" asp-action="Leases"
+                   class="btn btn-dark w-100">View Report</a>
+            </div>
+        </div>
+    </div>
 </div>

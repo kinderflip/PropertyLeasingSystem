@@ -1,0 +1,76 @@
+﻿@model List<PropertyLeasingReports.Models.PropertyReport>
+@{
+    ViewData["Title"] = "Properties Report";
+    var statusNames = new[] { "Available", "Leased", "Under Maintenance" };
+    var typeNames = new[] { "Apartment", "Villa", "Shop", "Office" };
+    var statusColors = new[] { "success", "warning", "danger" };
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>🏠 Properties Report</h2>
+    <span class="text-muted">Total: @Model.Count properties</span>
+</div>
+
+<!-- Summary Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card bg-success text-white text-center shadow-sm">
+            <div class="card-body">
+                <h2>@Model.Count(p => p.Status == 0)</h2>
+                <p class="mb-0">Available</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card bg-warning text-white text-center shadow-sm">
+            <div class="card-body">
+                <h2>@Model.Count(p => p.Status == 1)</h2>
+                <p class="mb-0">Leased</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card bg-danger text-white text-center shadow-sm">
+            <div class="card-body">
+                <h2>@Model.Count(p => p.Status == 2)</h2>
+                <p class="mb-0">Under Maintenance</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead class="table-dark">
+                <tr>
+                    <th>#</th>
+                    <th>Address</th>
+                    <th>City</th>
+                    <th>Type</th>
+                    <th>Bedrooms</th>
+                    <th>Monthly Rent</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model)
+                {
+                    <tr>
+                        <td>@item.PropertyId</td>
+                        <td>@item.Address</td>
+                        <td>@item.City</td>
+                        <td>@typeNames[item.PropertyType]</td>
+                        <td>@item.Bedrooms</td>
+                        <td>BD @item.MonthlyRent.ToString("F2")</td>
+                        <td>
+                            <span class="badge bg-@statusColors[item.Status]">
+                                @statusNames[item.Status]
+                            </span>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

@@ -1,0 +1,78 @@
+﻿@model List<PropertyLeasingReports.Models.MaintenanceReport>
+@{
+    ViewData["Title"] = "Maintenance Report";
+    var statusNames = new[] { "Pending", "In Progress", "Completed" };
+    var statusColors = new[] { "warning", "info", "success" };
+    var categoryNames = new[] { "Plumbing", "Electrical", "HVAC", "General" };
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>🔧 Maintenance Report</h2>
+    <span class="text-muted">Total: @Model.Count requests</span>
+</div>
+
+<!-- Summary Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card bg-warning text-white text-center shadow-sm">
+            <div class="card-body">
+                <h2>@Model.Count(m => m.Status == 0)</h2>
+                <p class="mb-0">Pending</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card bg-info text-white text-center shadow-sm">
+            <div class="card-body">
+                <h2>@Model.Count(m => m.Status == 1)</h2>
+                <p class="mb-0">In Progress</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card bg-success text-white text-center shadow-sm">
+            <div class="card-body">
+                <h2>@Model.Count(m => m.Status == 2)</h2>
+                <p class="mb-0">Completed</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead class="table-dark">
+                <tr>
+                    <th>#</th>
+                    <th>Title</th>
+                    <th>Category</th>
+                    <th>Status</th>
+                    <th>Date Submitted</th>
+                    <th>Date Resolved</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model)
+                {
+                    <tr>
+                        <td>@item.RequestId</td>
+                        <td>@item.Title</td>
+                        <td>@categoryNames[item.Category]</td>
+                        <td>
+                            <span class="badge bg-@statusColors[item.Status]">
+                                @statusNames[item.Status]
+                            </span>
+                        </td>
+                        <td>@item.DateSubmitted.ToString("dd MMM yyyy")</td>
+                        <td>
+                            @(item.DateResolved.HasValue
+                                                    ? item.DateResolved.Value.ToString("dd MMM yyyy")
+                                                    : "Not resolved yet")
+                    </td>
+                </tr>
+                                }
+            </tbody>
+        </table>
+    </div>
+</div>
