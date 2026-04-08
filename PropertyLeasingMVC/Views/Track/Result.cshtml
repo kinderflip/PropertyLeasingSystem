@@ -1,29 +1,63 @@
-﻿@model PropertyLeasingMVC.Controllers.TrackingResult
+@model PropertyLeasingMVC.Controllers.TrackingResult
 @{
     ViewData["Title"] = "Request Status";
+
+    var statusBadge = Model.Status switch
+    {
+        "Submitted" => "bg-warning text-dark",
+        "Assigned" => "bg-info",
+        "InProgress" => "bg-primary",
+        "Resolved" => "bg-success",
+        "Closed" => "bg-dark",
+        _ => "bg-secondary"
+    };
+
+    var priorityBadge = Model.Priority switch
+    {
+        "Low" => "bg-secondary",
+        "Medium" => "bg-info",
+        "High" => "bg-warning text-dark",
+        "Urgent" => "bg-danger",
+        _ => "bg-secondary"
+    };
 }
 
 <div class="row justify-content-center mt-5">
     <div class="col-md-7">
         <div class="card shadow">
             <div class="card-header bg-dark text-white text-center py-3">
-                <h4>🔧 Maintenance Request #@Model.RequestId</h4>
+                <h4>Maintenance Request #@Model.RequestId</h4>
             </div>
             <div class="card-body p-4">
 
-                <!-- Status Badge -->
+                <!-- Status & Priority Badges -->
                 <div class="text-center mb-4">
-                    @if (Model.Status == "Pending")
-                    {
-                        <span class="badge bg-warning text-dark fs-5 px-4 py-2">⏳ Pending</span>
+                    <span class="badge @priorityBadge fs-6 px-3 py-2 me-2">@Model.Priority Priority</span>
+                    <span class="badge @statusBadge fs-6 px-3 py-2">@Model.Status</span>
+                </div>
+
+                <!-- Lifecycle Progress -->
+                <div class="d-flex justify-content-between text-center mb-4">
+                    @{
+                        var stages = new[] { "Submitted", "Assigned", "InProgress", "Resolved", "Closed" };
+                        var currentIndex = Array.IndexOf(stages, Model.Status);
+                        if (currentIndex < 0) currentIndex = 0;
                     }
-                    else if (Model.Status == "InProgress")
+                    @for (int i = 0; i < stages.Length; i++)
                     {
-                        <span class="badge bg-info fs-5 px-4 py-2">🔨 In Progress</span>
-                    }
-                    else
-                    {
-                        <span class="badge bg-success fs-5 px-4 py-2">✅ Completed</span>
+                        var stageClass = i <= currentIndex ? "bg-success text-white" : "bg-light text-muted";
+                        <div class="flex-fill">
+                            <div class="rounded-circle d-inline-flex align-items-center justify-content-center @stageClass" style="width:32px;height:32px;font-size:0.8rem;">
+                                @(i + 1)
+                            </div>
+                            <div class="small mt-1">@stages[i]</div>
+                        </div>
+                        if (i < stages.Length - 1)
+                        {
+                            <div class="flex-fill d-flex align-items-center">
+                                <hr class="w-100" />
+                            </div>
+                        }
                     }
                 </div>
 
@@ -41,8 +75,16 @@
                         <td>@Model.PropertyAddress, @Model.PropertyCity</td>
                     </tr>
                     <tr>
+                        <th class="bg-light">Assigned To</th>
+                        <td>@Model.AssignedTo</td>
+                    </tr>
+                    <tr>
                         <th class="bg-light">Date Submitted</th>
                         <td>@Model.DateSubmitted</td>
+                    </tr>
+                    <tr>
+                        <th class="bg-light">Date Assigned</th>
+                        <td>@Model.DateAssigned</td>
                     </tr>
                     <tr>
                         <th class="bg-light">Date Resolved</th>
@@ -52,8 +94,8 @@
 
             </div>
             <div class="card-footer text-center">
-                <a asp-action="Index" class="btn btn-outline-dark">🔍 Track Another Request</a>
-                <a asp-controller="Home" asp-action="Index" class="btn btn-outline-secondary ms-2">🏠 Home</a>
+                <a asp-action="Index" class="btn btn-outline-dark">Track Another Request</a>
+                <a asp-controller="Home" asp-action="Index" class="btn btn-outline-secondary ms-2">Home</a>
             </div>
         </div>
     </div>

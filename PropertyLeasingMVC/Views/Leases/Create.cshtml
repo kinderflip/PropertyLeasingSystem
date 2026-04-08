@@ -1,54 +1,67 @@
-﻿@model PropertyLeasingAPI.Models.Lease
-
+@model PropertyLeasingAPI.Models.Lease
 @{
-    ViewData["Title"] = "Create";
+    ViewData["Title"] = "Apply for Lease";
 }
 
-<h1>Create</h1>
-
-<h4>Lease</h4>
+<h2>Apply for Lease</h2>
 <hr />
+
 <div class="row">
-    <div class="col-md-4">
-        <form asp-action="Create">
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-            <div class="form-group">
-                <label asp-for="PropertyId" class="control-label"></label>
-                <select asp-for="PropertyId" class ="form-control" asp-items="ViewBag.PropertyId"></select>
+    <div class="col-md-6">
+        <form asp-action="Create" method="post">
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+            <div class="mb-3">
+                <label asp-for="PropertyId" class="form-label">Property</label>
+                <select asp-for="PropertyId" asp-items="ViewBag.PropertyId" class="form-control">
+                    <option value="">-- Select Available Property --</option>
+                </select>
+                <span asp-validation-for="PropertyId" class="text-danger"></span>
             </div>
-            <div class="form-group">
-                <label asp-for="TenantId" class="control-label"></label>
-                <select asp-for="TenantId" class ="form-control" asp-items="ViewBag.TenantId"></select>
+
+            <div class="mb-3">
+                <label asp-for="TenantId" class="form-label">Tenant</label>
+                <select asp-for="TenantId" asp-items="ViewBag.TenantId" class="form-control">
+                    <option value="">-- Select Tenant --</option>
+                </select>
+                <span asp-validation-for="TenantId" class="text-danger"></span>
             </div>
-            <div class="form-group">
-                <label asp-for="StartDate" class="control-label"></label>
-                <input asp-for="StartDate" class="form-control" />
+
+            <div class="mb-3">
+                <label asp-for="StartDate" class="form-label"></label>
+                <input asp-for="StartDate" class="form-control" type="date" />
                 <span asp-validation-for="StartDate" class="text-danger"></span>
             </div>
-            <div class="form-group">
-                <label asp-for="EndDate" class="control-label"></label>
-                <input asp-for="EndDate" class="form-control" />
+
+            <div class="mb-3">
+                <label asp-for="EndDate" class="form-label"></label>
+                <input asp-for="EndDate" class="form-control" type="date" />
                 <span asp-validation-for="EndDate" class="text-danger"></span>
             </div>
-            <div class="form-group">
-                <label asp-for="MonthlyRent" class="control-label"></label>
+
+            <div class="mb-3">
+                <label asp-for="MonthlyRent" class="form-label"></label>
                 <input asp-for="MonthlyRent" class="form-control" />
                 <span asp-validation-for="MonthlyRent" class="text-danger"></span>
             </div>
-            <div class="form-group">
-                <label asp-for="Status" class="control-label"></label>
-                <select asp-for="Status" class="form-control"></select>
-                <span asp-validation-for="Status" class="text-danger"></span>
+
+            <div class="mb-3">
+                <label asp-for="ApplicationNotes" class="form-label"></label>
+                <textarea asp-for="ApplicationNotes" class="form-control" rows="3"
+                          placeholder="Any additional notes for the application..."></textarea>
+                <span asp-validation-for="ApplicationNotes" class="text-danger"></span>
             </div>
-            <div class="form-group">
-                <input type="submit" value="Create" class="btn btn-primary" />
+
+            <div class="alert alert-info">
+                <strong>Note:</strong> This will submit a lease application. The Property Manager will review and process your application through the screening workflow.
+            </div>
+
+            <div class="mt-3">
+                <button type="submit" class="btn btn-dark">Submit Application</button>
+                <a asp-action="Index" class="btn btn-outline-secondary ms-2">Cancel</a>
             </div>
         </form>
     </div>
-</div>
-
-<div>
-    <a asp-action="Index">Back to List</a>
 </div>
 
 @section Scripts {

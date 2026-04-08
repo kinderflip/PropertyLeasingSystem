@@ -1,10 +1,10 @@
-﻿@model IEnumerable<PropertyLeasingAPI.Models.MaintenanceRequest>
+@model IEnumerable<PropertyLeasingAPI.Models.MaintenanceRequest>
 @{
     ViewData["Title"] = "Maintenance Requests";
 }
 
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h2>🔧 Maintenance Requests</h2>
+    <h2>Maintenance Requests</h2>
     @if (User.IsInRole("PropertyManager") || User.IsInRole("Tenant"))
     {
         <a asp-action="Create" class="btn btn-danger">+ New Request</a>
@@ -13,35 +13,45 @@
 
 <!-- Live update notification area -->
 <div id="signalr-notification" class="alert alert-info d-none" role="alert">
-    <strong>🔔 Live Update:</strong> <span id="notification-text"></span>
+    <strong>Live Update:</strong> <span id="notification-text"></span>
 </div>
 
 <!-- Search & Filter Form -->
 <div class="card shadow-sm mb-4">
     <div class="card-body">
         <form asp-action="Index" method="get" class="row g-2">
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <input type="text" name="searchString" value="@ViewBag.SearchString"
                        class="form-control" placeholder="Search by title or description..." />
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <select name="status" class="form-control">
                     <option value="">-- All Statuses --</option>
-                    <option value="0" selected="@(ViewBag.Status == PropertyLeasingAPI.Models.MaintenanceStatus.Pending)">Pending</option>
-                    <option value="1" selected="@(ViewBag.Status == PropertyLeasingAPI.Models.MaintenanceStatus.InProgress)">In Progress</option>
-                    <option value="2" selected="@(ViewBag.Status == PropertyLeasingAPI.Models.MaintenanceStatus.Completed)">Completed</option>
+                    @foreach (var s in Enum.GetValues<PropertyLeasingAPI.Models.MaintenanceStatus>())
+                    {
+                        <option value="@((int)s)" selected="@(ViewBag.Status != null && (PropertyLeasingAPI.Models.MaintenanceStatus)ViewBag.Status == s)">@s</option>
+                    }
                 </select>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <select name="category" class="form-control">
                     <option value="">-- All Categories --</option>
-                    <option value="0" selected="@(ViewBag.Category == PropertyLeasingAPI.Models.MaintenanceCategory.Plumbing)">Plumbing</option>
-                    <option value="1" selected="@(ViewBag.Category == PropertyLeasingAPI.Models.MaintenanceCategory.Electrical)">Electrical</option>
-                    <option value="2" selected="@(ViewBag.Category == PropertyLeasingAPI.Models.MaintenanceCategory.HVAC)">HVAC</option>
-                    <option value="3" selected="@(ViewBag.Category == PropertyLeasingAPI.Models.MaintenanceCategory.General)">General</option>
+                    @foreach (var c in Enum.GetValues<PropertyLeasingAPI.Models.MaintenanceCategory>())
+                    {
+                        <option value="@((int)c)" selected="@(ViewBag.Category != null && (PropertyLeasingAPI.Models.MaintenanceCategory)ViewBag.Category == c)">@c</option>
+                    }
                 </select>
             </div>
-            <div class="col-md-2 d-flex gap-2">
+            <div class="col-md-2">
+                <select name="priority" class="form-control">
+                    <option value="">-- All Priorities --</option>
+                    @foreach (var p in Enum.GetValues<PropertyLeasingAPI.Models.MaintenancePriority>())
+                    {
+                        <option value="@((int)p)" selected="@(ViewBag.Priority != null && (PropertyLeasingAPI.Models.MaintenancePriority)ViewBag.Priority == p)">@p</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3 d-flex gap-2">
                 <button type="submit" class="btn btn-danger w-100">Search</button>
                 <a asp-action="Index" class="btn btn-outline-secondary w-100">Clear</a>
             </div>
@@ -58,7 +68,9 @@
                     <th>Property</th>
                     <th>Tenant</th>
                     <th>Category</th>
+                    <th>Priority</th>
                     <th>Status</th>
+                    <th>Assigned To</th>
                     <th>Date Submitted</th>
                     <th>Actions</th>
                 </tr>
@@ -72,18 +84,38 @@
                         <td>@item.Tenant?.FullName</td>
                         <td>@item.Category</td>
                         <td>
-                            <span class="badge @(item.Status == PropertyLeasingAPI.Models.MaintenanceStatus.Pending ? "bg-warning" :
-                                                                                 item.Status == PropertyLeasingAPI.Models.MaintenanceStatus.InProgress ? "bg-info" :
-                                                                                 "bg-success")"
-                              id="status-@item.RequestId">
-                            @item.Status
-                        </span>
-                    </td>
-                    <td>@item.DateSubmitted.ToString("dd MMM yyyy")</td>
-                    <td>
-                        <a asp-action="Details" asp-route-id="@item.RequestId"
-                           class="btn btn-sm btn-outline-primary">Details</a>
-                        @if (User.IsInRole("PropertyManager") || User.IsInRole("MaintenanceStaff"))
+                            @{
+                                var priorityClass = item.Priority switch
+                                {
+                                    PropertyLeasingAPI.Models.MaintenancePriority.Low => "bg-secondary",
+                                    PropertyLeasingAPI.Models.MaintenancePriority.Medium => "bg-info",
+                                    PropertyLeasingAPI.Models.MaintenancePriority.High => "bg-warning text-dark",
+                                    PropertyLeasingAPI.Models.MaintenancePriority.Urgent => "bg-danger",
+                                    _ => "bg-secondary"
+                                };
+                            }
+                            <span class="badge @priorityClass">@item.Priority</span>
+                        </td>
+                        <td>
+                            @{
+                                var statusClass = item.Status switch
+                                {
+                                    PropertyLeasingAPI.Models.MaintenanceStatus.Submitted => "bg-warning text-dark",
+                                    PropertyLeasingAPI.Models.MaintenanceStatus.Assigned => "bg-info",
+                                    PropertyLeasingAPI.Models.MaintenanceStatus.InProgress => "bg-primary",
+                                    PropertyLeasingAPI.Models.MaintenanceStatus.Resolved => "bg-success",
+                                    PropertyLeasingAPI.Models.MaintenanceStatus.Closed => "bg-dark",
+                                    _ => "bg-secondary"
+                                };
+                            }
+                            <span class="badge @statusClass" id="status-@item.RequestId">@item.Status</span>
+                        </td>
+                        <td>@(item.AssignedStaff?.FullName ?? "Unassigned")</td>
+                        <td>@item.DateSubmitted.ToString("dd MMM yyyy")</td>
+                        <td>
+                            <a asp-action="Details" asp-route-id="@item.RequestId"
+                               class="btn btn-sm btn-outline-primary">Details</a>
+                            @if (User.IsInRole("PropertyManager") || User.IsInRole("MaintenanceStaff"))
                             {
                                 <a asp-action="Edit" asp-route-id="@item.RequestId"
                                    class="btn btn-sm btn-outline-warning">Edit</a>
@@ -128,9 +160,11 @@
         });
 
         function getStatusClass(status) {
-            if (status === "Pending") return "bg-warning";
-            if (status === "InProgress") return "bg-info";
-            if (status === "Completed") return "bg-success";
+            if (status === "Submitted") return "bg-warning text-dark";
+            if (status === "Assigned") return "bg-info";
+            if (status === "InProgress") return "bg-primary";
+            if (status === "Resolved") return "bg-success";
+            if (status === "Closed") return "bg-dark";
             return "bg-secondary";
         }
 

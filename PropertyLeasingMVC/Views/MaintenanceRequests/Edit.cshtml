@@ -1,9 +1,9 @@
-﻿@model PropertyLeasingAPI.Models.MaintenanceRequest
+@model PropertyLeasingAPI.Models.MaintenanceRequest
 @{
     ViewData["Title"] = "Edit Maintenance Request";
 }
 
-<h2>🔧 Edit Maintenance Request</h2>
+<h2>Edit Maintenance Request</h2>
 <hr />
 
 <div class="row">
@@ -13,6 +13,8 @@
 
             <input type="hidden" asp-for="RequestId" />
             <input type="hidden" asp-for="DateSubmitted" />
+            <input type="hidden" asp-for="DateAssigned" />
+            <input type="hidden" asp-for="DateResolved" />
 
             <div class="mb-3">
                 <label asp-for="PropertyId" class="form-label">Property</label>
@@ -52,12 +54,33 @@
             </div>
 
             <div class="mb-3">
+                <label asp-for="Priority" class="form-label"></label>
+                <select asp-for="Priority"
+                        asp-items="Html.GetEnumSelectList<PropertyLeasingAPI.Models.MaintenancePriority>()"
+                        class="form-control">
+                </select>
+                <span asp-validation-for="Priority" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
                 <label asp-for="Status" class="form-label"></label>
                 <select asp-for="Status"
                         asp-items="Html.GetEnumSelectList<PropertyLeasingAPI.Models.MaintenanceStatus>()"
                         class="form-control">
                 </select>
                 <span asp-validation-for="Status" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="AssignedStaffId" class="form-label">Assigned Staff</label>
+                <select asp-for="AssignedStaffId" asp-items="ViewBag.AssignedStaffId" class="form-control">
+                    <option value="">-- Unassigned --</option>
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="StaffNotes" class="form-label"></label>
+                <textarea asp-for="StaffNotes" class="form-control" rows="2" placeholder="Notes about the work done..."></textarea>
             </div>
 
             <div class="mt-3">

@@ -1,4 +1,4 @@
-﻿@{
+@{
     ViewData["Title"] = "Track Maintenance Request";
 }
 
@@ -6,24 +6,30 @@
     <div class="col-md-6">
         <div class="card shadow">
             <div class="card-header bg-dark text-white text-center py-4">
-                <h3>🔍 Track Maintenance Request</h3>
-                <p class="mb-0 text-muted">Enter your request ID to check its status</p>
+                <h3>Track Maintenance Request</h3>
+                <p class="mb-0 text-muted">Enter your ticket number and registered phone number</p>
             </div>
             <div class="card-body p-4">
 
                 @if (ViewBag.Error != null)
                 {
                     <div class="alert alert-danger">
-                        <strong>⚠️</strong> @ViewBag.Error
+                        @ViewBag.Error
                     </div>
                 }
 
                 <form asp-action="Index" method="post">
                     <div class="mb-3">
-                        <label class="form-label fw-bold">Request ID</label>
-                        <input type="number" name="requestId" class="form-control form-control-lg"
+                        <label class="form-label fw-bold">Ticket Number</label>
+                        <input type="number" name="ticketId" class="form-control form-control-lg"
                                placeholder="e.g. 1" min="1" required />
-                        <small class="text-muted">Your request ID was provided when you submitted your request.</small>
+                        <small class="text-muted">Your ticket number was provided when you submitted your request.</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Registered Phone Number</label>
+                        <input type="tel" name="phone" class="form-control form-control-lg"
+                               placeholder="e.g. +97333112233" required />
+                        <small class="text-muted">The phone number associated with your tenant account.</small>
                     </div>
                     <div class="d-grid">
                         <button type="submit" class="btn btn-dark btn-lg">Track Request</button>
@@ -31,7 +37,7 @@
                 </form>
             </div>
             <div class="card-footer text-center">
-                <small class="text-muted">No login required — this page is publicly accessible</small>
+                <small class="text-muted">No login required - this page is publicly accessible</small>
             </div>
         </div>
     </div>

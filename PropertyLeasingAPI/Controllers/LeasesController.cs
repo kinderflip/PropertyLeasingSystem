@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PropertyLeasingAPI.Data;
@@ -52,17 +52,27 @@ namespace PropertyLeasingAPI.Controllers
                 .ToListAsync();
         }
 
+        // GET: api/Leases/applications
+        [HttpGet("applications")]
+        public async Task<ActionResult<IEnumerable<Lease>>> GetLeaseApplications()
+        {
+            return await _context.Leases
+                .Include(l => l.Property)
+                .Include(l => l.Tenant)
+                .Where(l => l.Status == LeaseStatus.Application || l.Status == LeaseStatus.Screening)
+                .ToListAsync();
+        }
+
         // POST: api/Leases
         [HttpPost]
+        [Authorize(Roles = "PropertyManager,Tenant")]
         public async Task<ActionResult<Lease>> PostLease(Lease lease)
         {
+            // New leases start as Application
+            lease.Status = LeaseStatus.Application;
+            lease.ApplicationDate = DateTime.Now;
+
             _context.Leases.Add(lease);
-
-            // Update property status to Leased
-            var property = await _context.Properties.FindAsync(lease.PropertyId);
-            if (property != null)
-                property.Status = PropertyStatus.Leased;
-
             await _context.SaveChangesAsync();
             return CreatedAtAction(nameof(GetLease),
                 new { id = lease.LeaseId }, lease);
@@ -70,6 +80,7 @@ namespace PropertyLeasingAPI.Controllers
 
         // PUT: api/Leases/5
         [HttpPut("{id}")]
+        [Authorize(Roles = "PropertyManager")]
         public async Task<IActionResult> PutLease(int id, Lease lease)
         {
             if (id != lease.LeaseId) return BadRequest();
@@ -92,6 +103,7 @@ namespace PropertyLeasingAPI.Controllers
 
         // DELETE: api/Leases/5
         [HttpDelete("{id}")]
+        [Authorize(Roles = "PropertyManager")]
         public async Task<IActionResult> DeleteLease(int id)
         {
             var lease = await _context.Leases.FindAsync(id);

@@ -61,6 +61,7 @@ namespace PropertyLeasingMVC.Controllers
             {
                 _context.Add(tenant);
                 await _context.SaveChangesAsync();
+                TempData["SuccessMessage"] = "Tenant created successfully!";
                 return RedirectToAction(nameof(Index));
             }
             return View(tenant);
@@ -100,6 +101,7 @@ namespace PropertyLeasingMVC.Controllers
                 {
                     _context.Update(tenant);
                     await _context.SaveChangesAsync();
+                    TempData["SuccessMessage"] = "Tenant updated successfully!";
                 }
                 catch (DbUpdateConcurrencyException)
                 {
@@ -147,6 +149,7 @@ namespace PropertyLeasingMVC.Controllers
             }
 
             await _context.SaveChangesAsync();
+            TempData["SuccessMessage"] = "Tenant deleted successfully!";
             return RedirectToAction(nameof(Index));
         }
 

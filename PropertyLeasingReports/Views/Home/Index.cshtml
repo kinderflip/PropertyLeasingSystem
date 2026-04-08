@@ -1,19 +1,19 @@
-﻿@{
+@{
     ViewData["Title"] = "Reports Dashboard";
 }
 
 <div class="text-center mb-5 mt-3">
-    <h2>📊 Property Leasing — Reports Portal</h2>
-    <p class="text-muted">Select a report to view</p>
+    <h2>Property Leasing - Reports Portal</h2>
+    <p class="text-muted">Select a report to view detailed analytics and data</p>
 </div>
 
 <div class="row g-4 justify-content-center">
     <div class="col-md-3">
         <div class="card shadow text-center h-100">
             <div class="card-body p-4">
-                <h1>🏠</h1>
+                <div class="display-4 mb-2">🏠</div>
                 <h5 class="card-title">Properties Report</h5>
-                <p class="text-muted small">View all properties with status and rent details</p>
+                <p class="text-muted small">Occupancy rates, revenue metrics, breakdowns by type and city</p>
                 <a asp-controller="Reports" asp-action="Properties"
                    class="btn btn-primary w-100">View Report</a>
             </div>
@@ -22,9 +22,9 @@
     <div class="col-md-3">
         <div class="card shadow text-center h-100">
             <div class="card-body p-4">
-                <h1>🔧</h1>
+                <div class="display-4 mb-2">🔧</div>
                 <h5 class="card-title">Maintenance Report</h5>
-                <p class="text-muted small">View all maintenance requests and their status</p>
+                <p class="text-muted small">Resolution rates, avg resolution time, breakdowns by category and priority</p>
                 <a asp-controller="Reports" asp-action="Maintenance"
                    class="btn btn-danger w-100">View Report</a>
             </div>
@@ -33,11 +33,22 @@
     <div class="col-md-3">
         <div class="card shadow text-center h-100">
             <div class="card-body p-4">
-                <h1>📋</h1>
+                <div class="display-4 mb-2">📋</div>
                 <h5 class="card-title">Leases Report</h5>
-                <p class="text-muted small">View all leases with dates and monthly rent</p>
+                <p class="text-muted small">Active revenue, approval rates, lease duration and status analytics</p>
                 <a asp-controller="Reports" asp-action="Leases"
                    class="btn btn-dark w-100">View Report</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card shadow text-center h-100">
+            <div class="card-body p-4">
+                <div class="display-4 mb-2">💰</div>
+                <h5 class="card-title">Payments Report</h5>
+                <p class="text-muted small">Collection rates, overdue tracking, financial breakdowns by type</p>
+                <a asp-controller="Reports" asp-action="Payments"
+                   class="btn btn-success w-100">View Report</a>
             </div>
         </div>
     </div>

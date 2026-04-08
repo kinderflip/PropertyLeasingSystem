@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.SignalR;
@@ -14,21 +15,25 @@ namespace PropertyLeasingMVC.Controllers
     {
         private readonly AppDbContext _context;
         private readonly IHubContext<MaintenanceHub> _hubContext;
+        private readonly UserManager<ApplicationUser> _userManager;
 
         public MaintenanceRequestsController(
             AppDbContext context,
-            IHubContext<MaintenanceHub> hubContext)
+            IHubContext<MaintenanceHub> hubContext,
+            UserManager<ApplicationUser> userManager)
         {
             _context = context;
             _hubContext = hubContext;
+            _userManager = userManager;
         }
 
         // GET: MaintenanceRequests
-        public async Task<IActionResult> Index(string? searchString, MaintenanceStatus? status, MaintenanceCategory? category)
+        public async Task<IActionResult> Index(string? searchString, MaintenanceStatus? status, MaintenanceCategory? category, MaintenancePriority? priority)
         {
             var requests = _context.MaintenanceRequests
                 .Include(m => m.Property)
                 .Include(m => m.Tenant)
+                .Include(m => m.AssignedStaff)
                 .AsQueryable();
 
             if (!string.IsNullOrEmpty(searchString))
@@ -42,11 +47,15 @@ namespace PropertyLeasingMVC.Controllers
             if (category.HasValue)
                 requests = requests.Where(m => m.Category == category);
 
+            if (priority.HasValue)
+                requests = requests.Where(m => m.Priority == priority);
+
             ViewBag.SearchString = searchString;
             ViewBag.Status = status;
             ViewBag.Category = category;
+            ViewBag.Priority = priority;
 
-            return View(await requests.ToListAsync());
+            return View(await requests.OrderByDescending(m => m.DateSubmitted).ToListAsync());
         }
 
         // GET: MaintenanceRequests/Details/5
@@ -57,11 +66,145 @@ namespace PropertyLeasingMVC.Controllers
             var maintenanceRequest = await _context.MaintenanceRequests
                 .Include(m => m.Property)
                 .Include(m => m.Tenant)
+                .Include(m => m.AssignedStaff)
                 .FirstOrDefaultAsync(m => m.RequestId == id);
 
             if (maintenanceRequest == null) return NotFound();
 
+            // Provide staff list for assignment dropdown
+            var staffUsers = await _userManager.GetUsersInRoleAsync("MaintenanceStaff");
+            ViewBag.StaffList = new SelectList(staffUsers, "Id", "FullName", maintenanceRequest.AssignedStaffId);
+
             return View(maintenanceRequest);
+        }
+
+        // POST: MaintenanceRequests/Assign/5 - Property Manager assigns staff
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = "PropertyManager")]
+        public async Task<IActionResult> Assign(int id, string assignedStaffId)
+        {
+            var request = await _context.MaintenanceRequests.FindAsync(id);
+            if (request == null) return NotFound();
+
+            if (string.IsNullOrEmpty(assignedStaffId))
+            {
+                TempData["ErrorMessage"] = "Please select a staff member to assign.";
+                return RedirectToAction(nameof(Details), new { id });
+            }
+
+            request.AssignedStaffId = assignedStaffId;
+            request.DateAssigned = DateTime.Now;
+            if (request.Status == MaintenanceStatus.Submitted)
+                request.Status = MaintenanceStatus.Assigned;
+
+            await _context.SaveChangesAsync();
+
+            // Notify assigned staff
+            await NotificationsController.CreateNotification(_context,
+                assignedStaffId,
+                "New Assignment",
+                $"You have been assigned to maintenance request: {request.Title}",
+                NotificationType.MaintenanceUpdate,
+                $"/MaintenanceRequests/Details/{request.RequestId}");
+
+            // Notify tenant
+            var tenant = await _context.Tenants.FirstOrDefaultAsync(t => t.TenantId == request.TenantId);
+            if (tenant?.UserId != null)
+            {
+                await NotificationsController.CreateNotification(_context,
+                    tenant.UserId,
+                    "Request Assigned",
+                    $"Your maintenance request \"{request.Title}\" has been assigned to staff.",
+                    NotificationType.MaintenanceUpdate,
+                    $"/MaintenanceRequests/Details/{request.RequestId}");
+            }
+
+            // Notify via SignalR
+            await _hubContext.Clients.All.SendAsync(
+                "ReceiveStatusUpdate",
+                request.RequestId,
+                request.Status.ToString(),
+                request.Title);
+
+            TempData["SuccessMessage"] = "Staff assigned successfully!";
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
+        // POST: MaintenanceRequests/UpdateStatus/5 - Update status through lifecycle
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = "PropertyManager,MaintenanceStaff")]
+        public async Task<IActionResult> UpdateStatus(int id, MaintenanceStatus newStatus, string? staffNotes)
+        {
+            var request = await _context.MaintenanceRequests.FindAsync(id);
+            if (request == null) return NotFound();
+
+            // Validate status transitions
+            bool validTransition = (request.Status, newStatus) switch
+            {
+                (MaintenanceStatus.Submitted, MaintenanceStatus.Assigned) => true,
+                (MaintenanceStatus.Assigned, MaintenanceStatus.InProgress) => true,
+                (MaintenanceStatus.InProgress, MaintenanceStatus.Resolved) => true,
+                (MaintenanceStatus.Resolved, MaintenanceStatus.Closed) => true,
+                // Allow PropertyManager to skip steps if needed
+                (MaintenanceStatus.Submitted, MaintenanceStatus.InProgress) => true,
+                (MaintenanceStatus.InProgress, MaintenanceStatus.Closed) => true,
+                _ => false
+            };
+
+            if (!validTransition)
+            {
+                TempData["ErrorMessage"] = $"Cannot transition from {request.Status} to {newStatus}.";
+                return RedirectToAction(nameof(Details), new { id });
+            }
+
+            request.Status = newStatus;
+
+            if (!string.IsNullOrEmpty(staffNotes))
+                request.StaffNotes = staffNotes;
+
+            if (newStatus == MaintenanceStatus.Assigned && request.DateAssigned == null)
+                request.DateAssigned = DateTime.Now;
+
+            if ((newStatus == MaintenanceStatus.Resolved || newStatus == MaintenanceStatus.Closed)
+                && request.DateResolved == null)
+                request.DateResolved = DateTime.Now;
+
+            await _context.SaveChangesAsync();
+
+            // Notify tenant about status change
+            var tenantForNotify = await _context.Tenants.FirstOrDefaultAsync(t => t.TenantId == request.TenantId);
+            if (tenantForNotify?.UserId != null)
+            {
+                await NotificationsController.CreateNotification(_context,
+                    tenantForNotify.UserId,
+                    $"Request {newStatus}",
+                    $"Your maintenance request \"{request.Title}\" status changed to {newStatus}.",
+                    NotificationType.MaintenanceUpdate,
+                    $"/MaintenanceRequests/Details/{request.RequestId}");
+            }
+
+            // If assigned staff exists, notify them too
+            if (!string.IsNullOrEmpty(request.AssignedStaffId))
+            {
+                await NotificationsController.CreateNotification(_context,
+                    request.AssignedStaffId,
+                    $"Request {newStatus}",
+                    $"Maintenance request \"{request.Title}\" status changed to {newStatus}.",
+                    NotificationType.MaintenanceUpdate,
+                    $"/MaintenanceRequests/Details/{request.RequestId}");
+            }
+
+            // Notify via SignalR
+            await _hubContext.Clients.All.SendAsync(
+                "ReceiveStatusUpdate",
+                request.RequestId,
+                newStatus.ToString(),
+                request.Title);
+
+            TempData["SuccessMessage"] = $"Status updated to {newStatus} successfully!";
+            return RedirectToAction(nameof(Details), new { id });
         }
 
         // GET: MaintenanceRequests/Create
@@ -77,12 +220,12 @@ namespace PropertyLeasingMVC.Controllers
         [Authorize(Roles = "PropertyManager,Tenant")]
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("RequestId,PropertyId,TenantId,Title,Description,Category,Status,DateSubmitted,DateResolved")] MaintenanceRequest maintenanceRequest)
+        public async Task<IActionResult> Create([Bind("RequestId,PropertyId,TenantId,Title,Description,Category,Priority")] MaintenanceRequest maintenanceRequest)
         {
             if (ModelState.IsValid)
             {
                 maintenanceRequest.DateSubmitted = DateTime.Now;
-                maintenanceRequest.Status = MaintenanceStatus.Pending;
+                maintenanceRequest.Status = MaintenanceStatus.Submitted;
                 _context.Add(maintenanceRequest);
                 await _context.SaveChangesAsync();
 
@@ -90,7 +233,7 @@ namespace PropertyLeasingMVC.Controllers
                 await _hubContext.Clients.All.SendAsync(
                     "ReceiveStatusUpdate",
                     maintenanceRequest.RequestId,
-                    "Pending",
+                    "Submitted",
                     maintenanceRequest.Title);
 
                 TempData["SuccessMessage"] = "Maintenance request submitted successfully!";
@@ -112,6 +255,10 @@ namespace PropertyLeasingMVC.Controllers
 
             ViewData["PropertyId"] = new SelectList(_context.Properties, "PropertyId", "Address", maintenanceRequest.PropertyId);
             ViewData["TenantId"] = new SelectList(_context.Tenants, "TenantId", "FullName", maintenanceRequest.TenantId);
+
+            var staffUsers = await _userManager.GetUsersInRoleAsync("MaintenanceStaff");
+            ViewData["AssignedStaffId"] = new SelectList(staffUsers, "Id", "FullName", maintenanceRequest.AssignedStaffId);
+
             return View(maintenanceRequest);
         }
 
@@ -119,7 +266,7 @@ namespace PropertyLeasingMVC.Controllers
         [Authorize(Roles = "PropertyManager,MaintenanceStaff")]
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("RequestId,PropertyId,TenantId,Title,Description,Category,Status,DateSubmitted,DateResolved")] MaintenanceRequest maintenanceRequest)
+        public async Task<IActionResult> Edit(int id, [Bind("RequestId,PropertyId,TenantId,Title,Description,Category,Priority,Status,AssignedStaffId,StaffNotes,DateSubmitted,DateAssigned,DateResolved")] MaintenanceRequest maintenanceRequest)
         {
             if (id != maintenanceRequest.RequestId) return NotFound();
 
@@ -127,11 +274,13 @@ namespace PropertyLeasingMVC.Controllers
             {
                 try
                 {
-                    if (maintenanceRequest.Status == MaintenanceStatus.Completed
+                    // Auto-set dates based on status
+                    if (maintenanceRequest.Status == MaintenanceStatus.Assigned && maintenanceRequest.DateAssigned == null)
+                        maintenanceRequest.DateAssigned = DateTime.Now;
+
+                    if ((maintenanceRequest.Status == MaintenanceStatus.Resolved || maintenanceRequest.Status == MaintenanceStatus.Closed)
                         && maintenanceRequest.DateResolved == null)
-                    {
                         maintenanceRequest.DateResolved = DateTime.Now;
-                    }
 
                     _context.Update(maintenanceRequest);
                     await _context.SaveChangesAsync();
@@ -156,6 +305,10 @@ namespace PropertyLeasingMVC.Controllers
             }
             ViewData["PropertyId"] = new SelectList(_context.Properties, "PropertyId", "Address", maintenanceRequest.PropertyId);
             ViewData["TenantId"] = new SelectList(_context.Tenants, "TenantId", "FullName", maintenanceRequest.TenantId);
+
+            var staffList = await _userManager.GetUsersInRoleAsync("MaintenanceStaff");
+            ViewData["AssignedStaffId"] = new SelectList(staffList, "Id", "FullName", maintenanceRequest.AssignedStaffId);
+
             return View(maintenanceRequest);
         }
 
@@ -168,6 +321,7 @@ namespace PropertyLeasingMVC.Controllers
             var maintenanceRequest = await _context.MaintenanceRequests
                 .Include(m => m.Property)
                 .Include(m => m.Tenant)
+                .Include(m => m.AssignedStaff)
                 .FirstOrDefaultAsync(m => m.RequestId == id);
 
             if (maintenanceRequest == null) return NotFound();

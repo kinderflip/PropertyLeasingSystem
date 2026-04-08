@@ -1,42 +1,77 @@
-﻿@model PropertyLeasingAPI.Models.Payment
-
+@model PropertyLeasingAPI.Models.Payment
+@using PropertyLeasingAPI.Models
 @{
-    ViewData["Title"] = "Details";
+    ViewData["Title"] = "Payment Details";
+
+    var statusClass = Model.Status switch
+    {
+        PaymentStatus.Completed => "bg-success",
+        PaymentStatus.Overdue => "bg-danger",
+        PaymentStatus.Pending => "bg-warning text-dark",
+        _ => "bg-secondary"
+    };
 }
 
-<h1>Details</h1>
+<h2>Payment Details</h2>
+<hr />
 
-<div>
-    <h4>Payment</h4>
-    <hr />
-    <dl class="row">
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Amount)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Amount)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.PaymentDate)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.PaymentDate)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.PaymentType)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.PaymentType)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Lease)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Lease.LeaseId)
-        </dd>
-    </dl>
-</div>
-<div>
-    <a asp-action="Edit" asp-route-id="@Model?.PaymentId">Edit</a> |
-    <a asp-action="Index">Back to List</a>
+<div class="row">
+    <div class="col-md-8">
+        <div class="card shadow-sm">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Payment #@Model.PaymentId</h5>
+                <span class="badge @statusClass fs-6">@Model.Status</span>
+            </div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-4">Tenant</dt>
+                    <dd class="col-sm-8">@Model.Lease?.Tenant?.FullName</dd>
+
+                    <dt class="col-sm-4">Property</dt>
+                    <dd class="col-sm-8">@Model.Lease?.Property?.Address</dd>
+
+                    <dt class="col-sm-4">Amount</dt>
+                    <dd class="col-sm-8 fw-bold">@Model.Amount.ToString("C")</dd>
+
+                    <dt class="col-sm-4">Due Date</dt>
+                    <dd class="col-sm-8">@Model.DueDate.ToString("dd MMM yyyy")</dd>
+
+                    <dt class="col-sm-4">Payment Date</dt>
+                    <dd class="col-sm-8">@(Model.PaymentDate.HasValue ? Model.PaymentDate.Value.ToString("dd MMM yyyy") : "Not paid yet")</dd>
+
+                    <dt class="col-sm-4">Payment Type</dt>
+                    <dd class="col-sm-8">@Model.PaymentType</dd>
+
+                    <dt class="col-sm-4">Lease ID</dt>
+                    <dd class="col-sm-8">
+                        <a asp-controller="Leases" asp-action="Details" asp-route-id="@Model.LeaseId">Lease #@Model.LeaseId</a>
+                    </dd>
+                </dl>
+            </div>
+        </div>
+
+        @if (User.IsInRole("PropertyManager") && Model.Status != PaymentStatus.Completed)
+        {
+            <div class="card shadow-sm mt-3">
+                <div class="card-header bg-success text-white">
+                    <h6 class="mb-0">Mark as Paid</h6>
+                </div>
+                <div class="card-body">
+                    <form asp-action="MarkAsPaid" asp-route-id="@Model.PaymentId" method="post">
+                        <p>Mark this payment as completed with today's date.</p>
+                        <button type="submit" class="btn btn-success">Mark as Paid</button>
+                    </form>
+                </div>
+            </div>
+        }
+
+        <div class="mt-3 d-flex gap-2">
+            @if (User.IsInRole("PropertyManager"))
+            {
+                <a asp-action="Edit" asp-route-id="@Model.PaymentId" class="btn btn-outline-primary">Edit</a>
+                <a asp-action="Delete" asp-route-id="@Model.PaymentId" class="btn btn-outline-danger">Delete</a>
+            }
+            <a asp-action="Index" class="btn btn-outline-secondary">Back to List</a>
+        </div>
+    </div>
 </div>

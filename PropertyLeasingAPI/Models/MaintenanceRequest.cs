@@ -4,7 +4,8 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace PropertyLeasingAPI.Models
 {
     public enum MaintenanceCategory { Plumbing, Electrical, HVAC, General }
-    public enum MaintenanceStatus { Pending, InProgress, Completed }
+    public enum MaintenanceStatus { Submitted, Assigned, InProgress, Resolved, Closed }
+    public enum MaintenancePriority { Low, Medium, High, Urgent }
 
     public class MaintenanceRequest
     {
@@ -29,10 +30,22 @@ namespace PropertyLeasingAPI.Models
 
         public MaintenanceCategory Category { get; set; }
 
-        public MaintenanceStatus Status { get; set; } = MaintenanceStatus.Pending;
+        public MaintenancePriority Priority { get; set; } = MaintenancePriority.Medium;
+
+        public MaintenanceStatus Status { get; set; } = MaintenanceStatus.Submitted;
+
+        [Display(Name = "Assigned Staff")]
+        public string? AssignedStaffId { get; set; }
+
+        [Display(Name = "Staff Notes")]
+        [StringLength(500)]
+        public string? StaffNotes { get; set; }
 
         [Display(Name = "Date Submitted")]
         public DateTime DateSubmitted { get; set; } = DateTime.Now;
+
+        [Display(Name = "Date Assigned")]
+        public DateTime? DateAssigned { get; set; }
 
         [Display(Name = "Date Resolved")]
         public DateTime? DateResolved { get; set; }
@@ -40,5 +53,6 @@ namespace PropertyLeasingAPI.Models
         // Navigation properties
         public Property? Property { get; set; }
         public Tenant? Tenant { get; set; }
+        public ApplicationUser? AssignedStaff { get; set; }
     }
 }

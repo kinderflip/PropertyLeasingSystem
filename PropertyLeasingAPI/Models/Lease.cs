@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace PropertyLeasingAPI.Models
 {
-    public enum LeaseStatus { Active, Expired, Terminated }
+    public enum LeaseStatus { Application, Screening, Approved, Rejected, Active, Renewal, Expired, Terminated }
 
     public class Lease : IValidatableObject
     {
@@ -33,7 +33,23 @@ namespace PropertyLeasingAPI.Models
         [Display(Name = "Monthly Rent")]
         public decimal MonthlyRent { get; set; }
 
-        public LeaseStatus Status { get; set; } = LeaseStatus.Active;
+        public LeaseStatus Status { get; set; } = LeaseStatus.Application;
+
+        [DataType(DataType.Date)]
+        [Display(Name = "Application Date")]
+        public DateTime ApplicationDate { get; set; } = DateTime.Now;
+
+        [StringLength(500)]
+        [Display(Name = "Application Notes")]
+        public string? ApplicationNotes { get; set; }
+
+        [StringLength(500)]
+        [Display(Name = "Screening Notes")]
+        public string? ScreeningNotes { get; set; }
+
+        [DataType(DataType.Date)]
+        [Display(Name = "Approval Date")]
+        public DateTime? ApprovalDate { get; set; }
 
         // Navigation properties
         public Property? Property { get; set; }
@@ -48,7 +64,7 @@ namespace PropertyLeasingAPI.Models
                     "End date must be after start date.",
                     new[] { nameof(EndDate) });
 
-            if (StartDate < DateTime.Today)
+            if (Status == LeaseStatus.Application && StartDate < DateTime.Today)
                 yield return new ValidationResult(
                     "Start date cannot be in the past.",
                     new[] { nameof(StartDate) });

@@ -1,44 +1,150 @@
-﻿@model List<PropertyLeasingReports.Models.LeaseReport>
+@model List<PropertyLeasingReports.Models.LeaseReport>
 @{
     ViewData["Title"] = "Leases Report";
-    var statusNames = new[] { "Active", "Expired", "Terminated" };
-    var statusColors = new[] { "success", "secondary", "danger" };
+    // LeaseStatus: Application=0, Screening=1, Approved=2, Rejected=3, Active=4, Renewal=5, Expired=6, Terminated=7
+    var statusNames = new[] { "Application", "Screening", "Approved", "Rejected", "Active", "Renewal", "Expired", "Terminated" };
+    var statusColors = new[] { "info", "warning", "primary", "danger", "success", "secondary", "dark", "danger" };
+
+    // Aggregate metrics
+    var totalLeases = Model.Count;
+    var activeLeases = Model.Where(l => l.Status == 4).ToList();
+    var activeCount = activeLeases.Count;
+    var applicationCount = Model.Count(l => l.Status == 0 || l.Status == 1);
+    var rejectedCount = Model.Count(l => l.Status == 3);
+    var terminatedCount = Model.Count(l => l.Status == 7);
+
+    var totalActiveRevenue = activeLeases.Sum(l => l.MonthlyRent);
+    var avgMonthlyRent = Model.Any() ? Model.Average(l => l.MonthlyRent) : 0;
+    var avgLeaseDurationMonths = Model.Any()
+        ? Model.Average(l => (l.EndDate - l.StartDate).TotalDays / 30.0)
+        : 0;
+
+    // Approval rate (approved + active + renewal out of all non-pending)
+    var decidedLeases = Model.Count(l => l.Status >= 2); // Approved through Terminated
+    var approvedLeases = Model.Count(l => l.Status == 2 || l.Status == 4 || l.Status == 5);
+    var approvalRate = decidedLeases > 0 ? (double)approvedLeases / decidedLeases * 100 : 0;
 }
 
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2>📋 Leases Report</h2>
-    <span class="text-muted">Total: @Model.Count leases</span>
+    <h2>Leases Report</h2>
+    <span class="text-muted">Generated: @DateTime.Now.ToString("dd MMM yyyy HH:mm")</span>
 </div>
 
-<!-- Summary Cards -->
+<!-- Key Metrics -->
 <div class="row g-3 mb-4">
-    <div class="col-md-4">
+    <div class="col-md-3">
+        <div class="card bg-dark text-white text-center shadow-sm">
+            <div class="card-body">
+                <h2>@totalLeases</h2>
+                <p class="mb-0">Total Leases</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
         <div class="card bg-success text-white text-center shadow-sm">
             <div class="card-body">
-                <h2>@Model.Count(l => l.Status == 0)</h2>
+                <h2>@activeCount</h2>
                 <p class="mb-0">Active</p>
             </div>
         </div>
     </div>
-    <div class="col-md-4">
-        <div class="card bg-secondary text-white text-center shadow-sm">
+    <div class="col-md-3">
+        <div class="card bg-info text-white text-center shadow-sm">
             <div class="card-body">
-                <h2>@Model.Count(l => l.Status == 1)</h2>
-                <p class="mb-0">Expired</p>
+                <h2>@applicationCount</h2>
+                <p class="mb-0">Pending Applications</p>
             </div>
         </div>
     </div>
-    <div class="col-md-4">
+    <div class="col-md-3">
         <div class="card bg-danger text-white text-center shadow-sm">
             <div class="card-body">
-                <h2>@Model.Count(l => l.Status == 2)</h2>
-                <p class="mb-0">Terminated</p>
+                <h2>@(rejectedCount + terminatedCount)</h2>
+                <p class="mb-0">Rejected / Terminated</p>
             </div>
         </div>
     </div>
 </div>
 
+<!-- Aggregate Metrics -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card shadow-sm border-start border-success border-4">
+            <div class="card-body">
+                <h6 class="text-muted">Active Monthly Revenue</h6>
+                <h3 class="mb-0">BD @totalActiveRevenue.ToString("F2")</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card shadow-sm border-start border-info border-4">
+            <div class="card-body">
+                <h6 class="text-muted">Average Monthly Rent</h6>
+                <h3 class="mb-0">BD @avgMonthlyRent.ToString("F2")</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card shadow-sm border-start border-primary border-4">
+            <div class="card-body">
+                <h6 class="text-muted">Avg Lease Duration</h6>
+                <h3 class="mb-0">@avgLeaseDurationMonths.ToString("F1") months</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card shadow-sm border-start border-warning border-4">
+            <div class="card-body">
+                <h6 class="text-muted">Approval Rate</h6>
+                <h3 class="mb-0">@approvalRate.ToString("F1")%</h3>
+                <div class="progress mt-2" style="height: 6px;">
+                    <div class="progress-bar bg-warning" style="width: @approvalRate%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Status Breakdown -->
+<div class="row g-3 mb-4">
+    <div class="col-md-12">
+        <div class="card shadow-sm">
+            <div class="card-header bg-light fw-bold">Lease Status Breakdown</div>
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0">
+                    <thead><tr><th>Status</th><th>Count</th><th>Total Monthly Rent</th><th>% of Total</th></tr></thead>
+                    <tbody>
+                        @for (int i = 0; i < statusNames.Length; i++)
+                        {
+                            var statusLeases = Model.Where(l => l.Status == i).ToList();
+                            if (statusLeases.Any())
+                            {
+                                var pct = totalLeases > 0 ? (double)statusLeases.Count / totalLeases * 100 : 0;
+                                <tr>
+                                    <td><span class="badge bg-@statusColors[i]">@statusNames[i]</span></td>
+                                    <td>@statusLeases.Count</td>
+                                    <td>BD @statusLeases.Sum(l => l.MonthlyRent).ToString("F2")</td>
+                                    <td>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <div class="progress flex-grow-1" style="height: 6px;">
+                                                <div class="progress-bar bg-@statusColors[i]" style="width: @pct%"></div>
+                                            </div>
+                                            <small>@pct.ToString("F0")%</small>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Data Table -->
 <div class="card shadow-sm">
+    <div class="card-header bg-light fw-bold">All Leases</div>
     <div class="card-body p-0">
         <table class="table table-hover mb-0">
             <thead class="table-dark">
@@ -48,6 +154,7 @@
                     <th>Tenant ID</th>
                     <th>Start Date</th>
                     <th>End Date</th>
+                    <th>Duration</th>
                     <th>Monthly Rent</th>
                     <th>Status</th>
                 </tr>
@@ -61,10 +168,11 @@
                         <td>@item.TenantId</td>
                         <td>@item.StartDate.ToString("dd MMM yyyy")</td>
                         <td>@item.EndDate.ToString("dd MMM yyyy")</td>
+                        <td>@((item.EndDate - item.StartDate).Days / 30) months</td>
                         <td>BD @item.MonthlyRent.ToString("F2")</td>
                         <td>
-                            <span class="badge bg-@statusColors[item.Status]">
-                                @statusNames[item.Status]
+                            <span class="badge bg-@(item.Status < statusColors.Length ? statusColors[item.Status] : "secondary")">
+                                @(item.Status < statusNames.Length ? statusNames[item.Status] : "Unknown")
                             </span>
                         </td>
                     </tr>

@@ -1,0 +1,67 @@
+@model IEnumerable<PropertyLeasingAPI.Models.Notification>
+@{
+    ViewData["Title"] = "Notifications";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Notifications</h2>
+    @if (Model.Any(n => !n.IsRead))
+    {
+        <form asp-action="MarkAllAsRead" method="post">
+            <button type="submit" class="btn btn-outline-secondary btn-sm">Mark All as Read</button>
+        </form>
+    }
+</div>
+
+@if (!Model.Any())
+{
+    <div class="card shadow-sm">
+        <div class="card-body text-center py-5">
+            <p class="text-muted mb-0">No notifications yet.</p>
+        </div>
+    </div>
+}
+else
+{
+    <div class="list-group shadow-sm">
+        @foreach (var notification in Model)
+        {
+            var bgClass = notification.IsRead ? "" : "list-group-item-light border-start border-primary border-4";
+            var typeIcon = notification.Type switch
+            {
+                PropertyLeasingAPI.Models.NotificationType.LeaseUpdate => "bg-dark",
+                PropertyLeasingAPI.Models.NotificationType.MaintenanceUpdate => "bg-danger",
+                PropertyLeasingAPI.Models.NotificationType.PaymentReminder => "bg-success",
+                _ => "bg-secondary"
+            };
+
+            <div class="list-group-item @bgClass">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="d-flex align-items-start">
+                        <span class="badge @typeIcon me-3 mt-1">@notification.Type</span>
+                        <div>
+                            <h6 class="mb-1 @(notification.IsRead ? "text-muted" : "fw-bold")">@notification.Title</h6>
+                            <p class="mb-1 small">@notification.Message</p>
+                            <small class="text-muted">@notification.CreatedAt.ToString("dd MMM yyyy HH:mm")</small>
+                        </div>
+                    </div>
+                    <div>
+                        @if (!notification.IsRead)
+                        {
+                            <form asp-action="MarkAsRead" method="post" class="d-inline">
+                                <input type="hidden" name="id" value="@notification.NotificationId" />
+                                <button type="submit" class="btn btn-sm btn-outline-primary">
+                                    @(notification.LinkUrl != null ? "View" : "Mark Read")
+                                </button>
+                            </form>
+                        }
+                        else if (notification.LinkUrl != null)
+                        {
+                            <a href="@notification.LinkUrl" class="btn btn-sm btn-outline-secondary">View</a>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}

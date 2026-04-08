@@ -1,66 +1,196 @@
-﻿@model PropertyLeasingAPI.Models.MaintenanceRequest
-
+@model PropertyLeasingAPI.Models.MaintenanceRequest
 @{
-    ViewData["Title"] = "Details";
+    ViewData["Title"] = "Maintenance Request Details";
+
+    var statusClass = Model.Status switch
+    {
+        PropertyLeasingAPI.Models.MaintenanceStatus.Submitted => "bg-warning text-dark",
+        PropertyLeasingAPI.Models.MaintenanceStatus.Assigned => "bg-info",
+        PropertyLeasingAPI.Models.MaintenanceStatus.InProgress => "bg-primary",
+        PropertyLeasingAPI.Models.MaintenanceStatus.Resolved => "bg-success",
+        PropertyLeasingAPI.Models.MaintenanceStatus.Closed => "bg-dark",
+        _ => "bg-secondary"
+    };
+
+    var priorityClass = Model.Priority switch
+    {
+        PropertyLeasingAPI.Models.MaintenancePriority.Low => "bg-secondary",
+        PropertyLeasingAPI.Models.MaintenancePriority.Medium => "bg-info",
+        PropertyLeasingAPI.Models.MaintenancePriority.High => "bg-warning text-dark",
+        PropertyLeasingAPI.Models.MaintenancePriority.Urgent => "bg-danger",
+        _ => "bg-secondary"
+    };
 }
 
-<h1>Details</h1>
+<h2>Maintenance Request Details</h2>
+<hr />
 
-<div>
-    <h4>MaintenanceRequest</h4>
-    <hr />
-    <dl class="row">
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Title)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Title)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Description)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Description)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Category)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Category)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Status)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Status)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.DateSubmitted)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.DateSubmitted)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.DateResolved)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.DateResolved)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Property)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Property.Address)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Tenant)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Tenant.Email)
-        </dd>
-    </dl>
+<div class="row">
+    <div class="col-md-8">
+        <!-- Request Info Card -->
+        <div class="card shadow-sm">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <strong>Request #@Model.RequestId - @Model.Title</strong>
+                <div>
+                    <span class="badge @priorityClass me-1">@Model.Priority</span>
+                    <span class="badge @statusClass">@Model.Status</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <dl class="row">
+                    <dt class="col-sm-4">Property</dt>
+                    <dd class="col-sm-8">@Model.Property?.Address</dd>
+
+                    <dt class="col-sm-4">Tenant</dt>
+                    <dd class="col-sm-8">@Model.Tenant?.FullName (@Model.Tenant?.Email)</dd>
+
+                    <dt class="col-sm-4">Category</dt>
+                    <dd class="col-sm-8">@Model.Category</dd>
+
+                    <dt class="col-sm-4">Description</dt>
+                    <dd class="col-sm-8">@Model.Description</dd>
+
+                    <dt class="col-sm-4">Assigned Staff</dt>
+                    <dd class="col-sm-8">@(Model.AssignedStaff?.FullName ?? "Unassigned")</dd>
+
+                    <dt class="col-sm-4">Date Submitted</dt>
+                    <dd class="col-sm-8">@Model.DateSubmitted.ToString("dd MMM yyyy HH:mm")</dd>
+
+                    @if (Model.DateAssigned.HasValue)
+                    {
+                        <dt class="col-sm-4">Date Assigned</dt>
+                        <dd class="col-sm-8">@Model.DateAssigned.Value.ToString("dd MMM yyyy HH:mm")</dd>
+                    }
+
+                    @if (Model.DateResolved.HasValue)
+                    {
+                        <dt class="col-sm-4">Date Resolved</dt>
+                        <dd class="col-sm-8">@Model.DateResolved.Value.ToString("dd MMM yyyy HH:mm")</dd>
+                    }
+
+                    @if (!string.IsNullOrEmpty(Model.StaffNotes))
+                    {
+                        <dt class="col-sm-4">Staff Notes</dt>
+                        <dd class="col-sm-8">@Model.StaffNotes</dd>
+                    }
+                </dl>
+            </div>
+        </div>
+
+        <!-- Lifecycle Progress -->
+        <div class="card shadow-sm mt-3">
+            <div class="card-header"><strong>Request Lifecycle</strong></div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between text-center">
+                    @{
+                        var stages = new[] { "Submitted", "Assigned", "InProgress", "Resolved", "Closed" };
+                        var currentIndex = (int)Model.Status;
+                    }
+                    @for (int i = 0; i < stages.Length; i++)
+                    {
+                        var stageClass = i <= currentIndex ? "bg-success text-white" : "bg-light text-muted";
+                        <div class="flex-fill">
+                            <div class="rounded-circle d-inline-flex align-items-center justify-content-center @stageClass" style="width:36px;height:36px;font-size:0.85rem;">
+                                @(i + 1)
+                            </div>
+                            <div class="small mt-1">@stages[i]</div>
+                        </div>
+                        if (i < stages.Length - 1)
+                        {
+                            <div class="flex-fill d-flex align-items-center">
+                                <hr class="w-100" />
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Staff Assignment (Property Manager only) -->
+        @if (User.IsInRole("PropertyManager") && Model.Status == PropertyLeasingAPI.Models.MaintenanceStatus.Submitted)
+        {
+            <div class="card shadow-sm mt-3">
+                <div class="card-header"><strong>Assign Staff</strong></div>
+                <div class="card-body">
+                    <form asp-action="Assign" method="post" class="row g-2 align-items-end">
+                        <input type="hidden" name="id" value="@Model.RequestId" />
+                        <div class="col-md-8">
+                            <label class="form-label">Select Maintenance Staff</label>
+                            <select name="assignedStaffId" class="form-control" asp-items="ViewBag.StaffList">
+                                <option value="">-- Select Staff --</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <button type="submit" class="btn btn-info w-100">Assign Staff</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        }
+
+        <!-- Status Update Actions -->
+        @if (User.IsInRole("PropertyManager") || User.IsInRole("MaintenanceStaff"))
+        {
+            <div class="card shadow-sm mt-3">
+                <div class="card-header"><strong>Update Status</strong></div>
+                <div class="card-body">
+                    @switch (Model.Status)
+                    {
+                        case PropertyLeasingAPI.Models.MaintenanceStatus.Submitted:
+                            @if (User.IsInRole("PropertyManager"))
+                            {
+                                <form asp-action="UpdateStatus" method="post" class="d-inline">
+                                    <input type="hidden" name="id" value="@Model.RequestId" />
+                                    <input type="hidden" name="newStatus" value="@((int)PropertyLeasingAPI.Models.MaintenanceStatus.InProgress)" />
+                                    <button type="submit" class="btn btn-primary">Start Work (Skip Assignment)</button>
+                                </form>
+                            }
+                            break;
+
+                        case PropertyLeasingAPI.Models.MaintenanceStatus.Assigned:
+                            <form asp-action="UpdateStatus" method="post" class="d-inline">
+                                <input type="hidden" name="id" value="@Model.RequestId" />
+                                <input type="hidden" name="newStatus" value="@((int)PropertyLeasingAPI.Models.MaintenanceStatus.InProgress)" />
+                                <button type="submit" class="btn btn-primary">Start Work</button>
+                            </form>
+                            break;
+
+                        case PropertyLeasingAPI.Models.MaintenanceStatus.InProgress:
+                            <form asp-action="UpdateStatus" method="post">
+                                <input type="hidden" name="id" value="@Model.RequestId" />
+                                <input type="hidden" name="newStatus" value="@((int)PropertyLeasingAPI.Models.MaintenanceStatus.Resolved)" />
+                                <div class="mb-2">
+                                    <textarea name="staffNotes" class="form-control" rows="2" placeholder="Notes about the resolution..."></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-success">Mark as Resolved</button>
+                            </form>
+                            break;
+
+                        case PropertyLeasingAPI.Models.MaintenanceStatus.Resolved:
+                            @if (User.IsInRole("PropertyManager"))
+                            {
+                                <form asp-action="UpdateStatus" method="post" class="d-inline">
+                                    <input type="hidden" name="id" value="@Model.RequestId" />
+                                    <input type="hidden" name="newStatus" value="@((int)PropertyLeasingAPI.Models.MaintenanceStatus.Closed)" />
+                                    <button type="submit" class="btn btn-dark">Close Request</button>
+                                </form>
+                            }
+                            break;
+
+                        default:
+                            <p class="text-muted mb-0">No further actions available.</p>
+                            break;
+                    }
+                </div>
+            </div>
+        }
+    </div>
 </div>
-<div>
-    <a asp-action="Edit" asp-route-id="@Model?.RequestId">Edit</a> |
-    <a asp-action="Index">Back to List</a>
+
+<div class="mt-3">
+    @if (User.IsInRole("PropertyManager") || User.IsInRole("MaintenanceStaff"))
+    {
+        <a asp-action="Edit" asp-route-id="@Model.RequestId" class="btn btn-outline-warning">Edit</a>
+    }
+    <a asp-action="Index" class="btn btn-outline-secondary">Back to List</a>
 </div>
