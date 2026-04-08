@@ -51,6 +51,23 @@
                             <li class="nav-item">
                                 <a class="nav-link" asp-controller="Payments" asp-action="Index">Payments</a>
                             </li>
+                            <li class="nav-item">
+                                <a class="nav-link position-relative" asp-controller="Notifications" asp-action="Index">
+                                    Notifications
+                                    @{
+                                        var notifContext = ViewContext.HttpContext.RequestServices.GetService(typeof(PropertyLeasingAPI.Data.AppDbContext)) as PropertyLeasingAPI.Data.AppDbContext;
+                                        var currentUserId = ViewContext.HttpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                                        if (notifContext != null && currentUserId != null)
+                                        {
+                                            var unreadCount = notifContext.Notifications.Count(n => n.UserId == currentUserId && !n.IsRead);
+                                            if (unreadCount > 0)
+                                            {
+                                                <span class="badge bg-danger rounded-pill">@unreadCount</span>
+                                            }
+                                        }
+                                    }
+                                </a>
+                            </li>
                         }
                     </ul>
 

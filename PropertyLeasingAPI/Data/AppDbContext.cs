@@ -13,10 +13,18 @@ namespace PropertyLeasingAPI.Data
         public DbSet<Lease> Leases { get; set; }
         public DbSet<MaintenanceRequest> MaintenanceRequests { get; set; }
         public DbSet<Payment> Payments { get; set; }
+        public DbSet<Notification> Notifications { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+
+            // MaintenanceRequest -> AssignedStaff relationship
+            modelBuilder.Entity<MaintenanceRequest>()
+                .HasOne(m => m.AssignedStaff)
+                .WithMany()
+                .HasForeignKey(m => m.AssignedStaffId)
+                .OnDelete(DeleteBehavior.SetNull);
 
             // Seed Roles
             modelBuilder.Entity<Microsoft.AspNetCore.Identity.IdentityRole>().HasData(

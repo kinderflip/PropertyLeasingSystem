@@ -89,18 +89,18 @@
                                         <td>@req.Title</td>
                                         <td>@req.Property?.Address</td>
                                         <td>
-                                            @if (req.Status == PropertyLeasingAPI.Models.MaintenanceStatus.Pending)
-                                            {
-                                                <span class="badge bg-warning">Pending</span>
+                                            @{
+                                                var reqBadge = req.Status switch
+                                                {
+                                                    PropertyLeasingAPI.Models.MaintenanceStatus.Submitted => "bg-warning text-dark",
+                                                    PropertyLeasingAPI.Models.MaintenanceStatus.Assigned => "bg-info",
+                                                    PropertyLeasingAPI.Models.MaintenanceStatus.InProgress => "bg-primary",
+                                                    PropertyLeasingAPI.Models.MaintenanceStatus.Resolved => "bg-success",
+                                                    PropertyLeasingAPI.Models.MaintenanceStatus.Closed => "bg-dark",
+                                                    _ => "bg-secondary"
+                                                };
                                             }
-                                            else if (req.Status == PropertyLeasingAPI.Models.MaintenanceStatus.InProgress)
-                                            {
-                                                <span class="badge bg-info">In Progress</span>
-                                            }
-                                            else
-                                            {
-                                                <span class="badge bg-success">Completed</span>
-                                            }
+                                            <span class="badge @reqBadge">@req.Status</span>
                                         </td>
                                     </tr>
                                 }

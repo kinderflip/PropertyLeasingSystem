@@ -36,6 +36,7 @@ namespace PropertyLeasingAPI.Controllers
 
         // POST: api/Tenants
         [HttpPost]
+        [Authorize(Roles = "PropertyManager")]
         public async Task<ActionResult<Tenant>> PostTenant(Tenant tenant)
         {
             _context.Tenants.Add(tenant);
@@ -46,6 +47,7 @@ namespace PropertyLeasingAPI.Controllers
 
         // PUT: api/Tenants/5
         [HttpPut("{id}")]
+        [Authorize(Roles = "PropertyManager")]
         public async Task<IActionResult> PutTenant(int id, Tenant tenant)
         {
             if (id != tenant.TenantId) return BadRequest();
@@ -68,6 +70,7 @@ namespace PropertyLeasingAPI.Controllers
 
         // DELETE: api/Tenants/5
         [HttpDelete("{id}")]
+        [Authorize(Roles = "PropertyManager")]
         public async Task<IActionResult> DeleteTenant(int id)
         {
             var tenant = await _context.Tenants.FindAsync(id);

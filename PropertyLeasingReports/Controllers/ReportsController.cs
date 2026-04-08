@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Net.Http.Headers;
 using System.Text.Json;
@@ -6,10 +6,11 @@ using PropertyLeasingReports.Models;
 
 namespace PropertyLeasingReports.Controllers
 {
-    [Authorize]
+    [Authorize(Roles = "PropertyManager")]
     public class ReportsController : Controller
     {
         private readonly IHttpClientFactory _httpClientFactory;
+        private static readonly JsonSerializerOptions _jsonOptions = new() { PropertyNameCaseInsensitive = true };
 
         public ReportsController(IHttpClientFactory httpClientFactory)
         {
@@ -32,15 +33,14 @@ namespace PropertyLeasingReports.Controllers
             var client = GetAuthenticatedClient();
             var response = await client.GetAsync("api/Properties");
 
+            var properties = new List<PropertyReport>();
             if (response.IsSuccessStatusCode)
             {
                 var json = await response.Content.ReadAsStringAsync();
-                var properties = JsonSerializer.Deserialize<List<PropertyReport>>(json,
-                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-                return View(properties ?? new List<PropertyReport>());
+                properties = JsonSerializer.Deserialize<List<PropertyReport>>(json, _jsonOptions) ?? new();
             }
 
-            return View(new List<PropertyReport>());
+            return View(properties);
         }
 
         // GET: /Reports/Maintenance
@@ -49,15 +49,14 @@ namespace PropertyLeasingReports.Controllers
             var client = GetAuthenticatedClient();
             var response = await client.GetAsync("api/MaintenanceRequests");
 
+            var requests = new List<MaintenanceReport>();
             if (response.IsSuccessStatusCode)
             {
                 var json = await response.Content.ReadAsStringAsync();
-                var requests = JsonSerializer.Deserialize<List<MaintenanceReport>>(json,
-                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-                return View(requests ?? new List<MaintenanceReport>());
+                requests = JsonSerializer.Deserialize<List<MaintenanceReport>>(json, _jsonOptions) ?? new();
             }
 
-            return View(new List<MaintenanceReport>());
+            return View(requests);
         }
 
         // GET: /Reports/Leases
@@ -66,15 +65,30 @@ namespace PropertyLeasingReports.Controllers
             var client = GetAuthenticatedClient();
             var response = await client.GetAsync("api/Leases");
 
+            var leases = new List<LeaseReport>();
             if (response.IsSuccessStatusCode)
             {
                 var json = await response.Content.ReadAsStringAsync();
-                var leases = JsonSerializer.Deserialize<List<LeaseReport>>(json,
-                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-                return View(leases ?? new List<LeaseReport>());
+                leases = JsonSerializer.Deserialize<List<LeaseReport>>(json, _jsonOptions) ?? new();
             }
 
-            return View(new List<LeaseReport>());
+            return View(leases);
+        }
+
+        // GET: /Reports/Payments
+        public async Task<IActionResult> Payments()
+        {
+            var client = GetAuthenticatedClient();
+            var response = await client.GetAsync("api/Payments");
+
+            var payments = new List<PaymentReport>();
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+                payments = JsonSerializer.Deserialize<List<PaymentReport>>(json, _jsonOptions) ?? new();
+            }
+
+            return View(payments);
         }
     }
 }

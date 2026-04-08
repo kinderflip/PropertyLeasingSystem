@@ -28,7 +28,7 @@ namespace PropertyLeasingMVC.Controllers
                 ActiveLeases = await _context.Leases
                     .CountAsync(l => l.Status == LeaseStatus.Active),
                 PendingMaintenance = await _context.MaintenanceRequests
-                    .CountAsync(m => m.Status == MaintenanceStatus.Pending),
+                    .CountAsync(m => m.Status == MaintenanceStatus.Submitted || m.Status == MaintenanceStatus.Assigned),
                 RecentRequests = await _context.MaintenanceRequests
                     .Include(m => m.Property)
                     .Include(m => m.Tenant)

@@ -1,9 +1,9 @@
-﻿@model PropertyLeasingAPI.Models.MaintenanceRequest
+@model PropertyLeasingAPI.Models.MaintenanceRequest
 @{
     ViewData["Title"] = "New Maintenance Request";
 }
 
-<h2>🔧 New Maintenance Request</h2>
+<h2>New Maintenance Request</h2>
 <hr />
 
 <div class="row">
@@ -47,6 +47,15 @@
                         class="form-control">
                 </select>
                 <span asp-validation-for="Category" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Priority" class="form-label"></label>
+                <select asp-for="Priority"
+                        asp-items="Html.GetEnumSelectList<PropertyLeasingAPI.Models.MaintenancePriority>()"
+                        class="form-control">
+                </select>
+                <span asp-validation-for="Priority" class="text-danger"></span>
             </div>
 
             <div class="mt-3">

@@ -1,65 +1,101 @@
-﻿@model IEnumerable<PropertyLeasingAPI.Models.Lease>
-
+@model IEnumerable<PropertyLeasingAPI.Models.Lease>
 @{
-    ViewData["Title"] = "Index";
+    ViewData["Title"] = "Leases";
 }
 
-<h1>Index</h1>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Leases</h2>
+    @if (User.IsInRole("PropertyManager") || User.IsInRole("Tenant"))
+    {
+        <a asp-action="Create" class="btn btn-dark">+ Apply for Lease</a>
+    }
+</div>
 
-<p>
-    <a asp-action="Create">Create New</a>
-</p>
-<table class="table">
-    <thead>
-        <tr>
-            <th>
-                @Html.DisplayNameFor(model => model.StartDate)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.EndDate)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.MonthlyRent)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Status)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Property)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Tenant)
-            </th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-@foreach (var item in Model) {
-        <tr>
-            <td>
-                @Html.DisplayFor(modelItem => item.StartDate)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.EndDate)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.MonthlyRent)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Status)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Property.Address)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Tenant.Email)
-            </td>
-            <td>
-                <a asp-action="Edit" asp-route-id="@item.LeaseId">Edit</a> |
-                <a asp-action="Details" asp-route-id="@item.LeaseId">Details</a> |
-                <a asp-action="Delete" asp-route-id="@item.LeaseId">Delete</a>
-            </td>
-        </tr>
-}
-    </tbody>
-</table>
+<!-- Search & Filter Form -->
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <form asp-action="Index" method="get" class="row g-2">
+            <div class="col-md-5">
+                <input type="text" name="searchString" value="@ViewBag.SearchString"
+                       class="form-control" placeholder="Search by property address or tenant name..." />
+            </div>
+            <div class="col-md-4">
+                <select name="status" class="form-control">
+                    <option value="">-- All Statuses --</option>
+                    @foreach (var s in Enum.GetValues<PropertyLeasingAPI.Models.LeaseStatus>())
+                    {
+                        <option value="@((int)s)" selected="@(ViewBag.Status != null && (PropertyLeasingAPI.Models.LeaseStatus)ViewBag.Status == s)">@s</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3 d-flex gap-2">
+                <button type="submit" class="btn btn-dark w-100">Search</button>
+                <a asp-action="Index" class="btn btn-outline-secondary w-100">Clear</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead class="table-dark">
+                <tr>
+                    <th>Property</th>
+                    <th>Tenant</th>
+                    <th>Start Date</th>
+                    <th>End Date</th>
+                    <th>Monthly Rent</th>
+                    <th>Status</th>
+                    <th>Application Date</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model)
+                {
+                    <tr>
+                        <td>@item.Property?.Address</td>
+                        <td>@item.Tenant?.FullName</td>
+                        <td>@item.StartDate.ToString("dd MMM yyyy")</td>
+                        <td>@item.EndDate.ToString("dd MMM yyyy")</td>
+                        <td>@item.MonthlyRent.ToString("C")</td>
+                        <td>
+                            @{
+                                var badgeClass = item.Status switch
+                                {
+                                    PropertyLeasingAPI.Models.LeaseStatus.Application => "bg-secondary",
+                                    PropertyLeasingAPI.Models.LeaseStatus.Screening => "bg-info",
+                                    PropertyLeasingAPI.Models.LeaseStatus.Approved => "bg-primary",
+                                    PropertyLeasingAPI.Models.LeaseStatus.Rejected => "bg-danger",
+                                    PropertyLeasingAPI.Models.LeaseStatus.Active => "bg-success",
+                                    PropertyLeasingAPI.Models.LeaseStatus.Renewal => "bg-warning text-dark",
+                                    PropertyLeasingAPI.Models.LeaseStatus.Expired => "bg-dark",
+                                    PropertyLeasingAPI.Models.LeaseStatus.Terminated => "bg-danger",
+                                    _ => "bg-secondary"
+                                };
+                            }
+                            <span class="badge @badgeClass">@item.Status</span>
+                        </td>
+                        <td>@item.ApplicationDate.ToString("dd MMM yyyy")</td>
+                        <td>
+                            <a asp-action="Details" asp-route-id="@item.LeaseId"
+                               class="btn btn-sm btn-outline-primary">Details</a>
+                            @if (User.IsInRole("PropertyManager"))
+                            {
+                                <a asp-action="Edit" asp-route-id="@item.LeaseId"
+                                   class="btn btn-sm btn-outline-warning">Edit</a>
+                                <a asp-action="Delete" asp-route-id="@item.LeaseId"
+                                   class="btn btn-sm btn-outline-danger">Delete</a>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        @if (!Model.Any())
+        {
+            <p class="text-muted text-center py-4">No leases found.</p>
+        }
+    </div>
+</div>

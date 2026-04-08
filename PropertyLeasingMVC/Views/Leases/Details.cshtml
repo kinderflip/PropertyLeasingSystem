@@ -1,54 +1,197 @@
-﻿@model PropertyLeasingAPI.Models.Lease
-
+@model PropertyLeasingAPI.Models.Lease
 @{
-    ViewData["Title"] = "Details";
+    ViewData["Title"] = "Lease Details";
+
+    var badgeClass = Model.Status switch
+    {
+        PropertyLeasingAPI.Models.LeaseStatus.Application => "bg-secondary",
+        PropertyLeasingAPI.Models.LeaseStatus.Screening => "bg-info",
+        PropertyLeasingAPI.Models.LeaseStatus.Approved => "bg-primary",
+        PropertyLeasingAPI.Models.LeaseStatus.Rejected => "bg-danger",
+        PropertyLeasingAPI.Models.LeaseStatus.Active => "bg-success",
+        PropertyLeasingAPI.Models.LeaseStatus.Renewal => "bg-warning text-dark",
+        PropertyLeasingAPI.Models.LeaseStatus.Expired => "bg-dark",
+        PropertyLeasingAPI.Models.LeaseStatus.Terminated => "bg-danger",
+        _ => "bg-secondary"
+    };
 }
 
-<h1>Details</h1>
+<h2>Lease Details</h2>
+<hr />
 
-<div>
-    <h4>Lease</h4>
-    <hr />
-    <dl class="row">
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.StartDate)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.StartDate)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.EndDate)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.EndDate)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.MonthlyRent)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.MonthlyRent)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Status)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Status)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Property)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Property.Address)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Tenant)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Tenant.Email)
-        </dd>
-    </dl>
+<div class="row">
+    <div class="col-md-8">
+        <div class="card shadow-sm">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <strong>Lease #@Model.LeaseId</strong>
+                <span class="badge @badgeClass fs-6">@Model.Status</span>
+            </div>
+            <div class="card-body">
+                <dl class="row">
+                    <dt class="col-sm-4">Property</dt>
+                    <dd class="col-sm-8">@Model.Property?.Address</dd>
+
+                    <dt class="col-sm-4">Tenant</dt>
+                    <dd class="col-sm-8">@Model.Tenant?.FullName (@Model.Tenant?.Email)</dd>
+
+                    <dt class="col-sm-4">Start Date</dt>
+                    <dd class="col-sm-8">@Model.StartDate.ToString("dd MMM yyyy")</dd>
+
+                    <dt class="col-sm-4">End Date</dt>
+                    <dd class="col-sm-8">@Model.EndDate.ToString("dd MMM yyyy")</dd>
+
+                    <dt class="col-sm-4">Monthly Rent</dt>
+                    <dd class="col-sm-8">@Model.MonthlyRent.ToString("C")</dd>
+
+                    <dt class="col-sm-4">Application Date</dt>
+                    <dd class="col-sm-8">@Model.ApplicationDate.ToString("dd MMM yyyy")</dd>
+
+                    @if (!string.IsNullOrEmpty(Model.ApplicationNotes))
+                    {
+                        <dt class="col-sm-4">Application Notes</dt>
+                        <dd class="col-sm-8">@Model.ApplicationNotes</dd>
+                    }
+
+                    @if (!string.IsNullOrEmpty(Model.ScreeningNotes))
+                    {
+                        <dt class="col-sm-4">Screening Notes</dt>
+                        <dd class="col-sm-8">@Model.ScreeningNotes</dd>
+                    }
+
+                    @if (Model.ApprovalDate.HasValue)
+                    {
+                        <dt class="col-sm-4">Approval Date</dt>
+                        <dd class="col-sm-8">@Model.ApprovalDate.Value.ToString("dd MMM yyyy")</dd>
+                    }
+                </dl>
+            </div>
+        </div>
+
+        <!-- Lifecycle Progress -->
+        <div class="card shadow-sm mt-3">
+            <div class="card-header"><strong>Lease Lifecycle</strong></div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between text-center">
+                    @{
+                        var stages = new[] { "Application", "Screening", "Approved", "Active" };
+                        var currentIndex = Model.Status switch
+                        {
+                            PropertyLeasingAPI.Models.LeaseStatus.Application => 0,
+                            PropertyLeasingAPI.Models.LeaseStatus.Screening => 1,
+                            PropertyLeasingAPI.Models.LeaseStatus.Approved => 2,
+                            PropertyLeasingAPI.Models.LeaseStatus.Active => 3,
+                            PropertyLeasingAPI.Models.LeaseStatus.Renewal => 3,
+                            _ => -1
+                        };
+                    }
+                    @for (int i = 0; i < stages.Length; i++)
+                    {
+                        var stageClass = i <= currentIndex ? "bg-success text-white" : "bg-light text-muted";
+                        <div class="flex-fill">
+                            <div class="rounded-circle d-inline-flex align-items-center justify-content-center @stageClass" style="width:40px;height:40px;">
+                                @(i + 1)
+                            </div>
+                            <div class="small mt-1">@stages[i]</div>
+                        </div>
+                        if (i < stages.Length - 1)
+                        {
+                            <div class="flex-fill d-flex align-items-center">
+                                <hr class="w-100" />
+                            </div>
+                        }
+                    }
+                </div>
+                @if (Model.Status == PropertyLeasingAPI.Models.LeaseStatus.Rejected)
+                {
+                    <div class="alert alert-danger mt-3 mb-0">This application was <strong>Rejected</strong>.</div>
+                }
+                @if (Model.Status == PropertyLeasingAPI.Models.LeaseStatus.Terminated)
+                {
+                    <div class="alert alert-danger mt-3 mb-0">This lease has been <strong>Terminated</strong>.</div>
+                }
+                @if (Model.Status == PropertyLeasingAPI.Models.LeaseStatus.Renewal)
+                {
+                    <div class="alert alert-warning mt-3 mb-0">This lease is pending <strong>Renewal</strong>.</div>
+                }
+            </div>
+        </div>
+
+        <!-- Status Transition Actions (Property Manager only) -->
+        @if (User.IsInRole("PropertyManager"))
+        {
+            <div class="card shadow-sm mt-3">
+                <div class="card-header"><strong>Manage Lease Status</strong></div>
+                <div class="card-body">
+                    @switch (Model.Status)
+                    {
+                        case PropertyLeasingAPI.Models.LeaseStatus.Application:
+                            <form asp-action="UpdateStatus" method="post" class="d-inline">
+                                <input type="hidden" name="id" value="@Model.LeaseId" />
+                                <input type="hidden" name="newStatus" value="@((int)PropertyLeasingAPI.Models.LeaseStatus.Screening)" />
+                                <button type="submit" class="btn btn-info">Move to Screening</button>
+                            </form>
+                            break;
+
+                        case PropertyLeasingAPI.Models.LeaseStatus.Screening:
+                            <form asp-action="UpdateStatus" method="post">
+                                <input type="hidden" name="id" value="@Model.LeaseId" />
+                                <div class="mb-3">
+                                    <label class="form-label">Screening Notes</label>
+                                    <textarea name="screeningNotes" class="form-control" rows="2" placeholder="Notes from screening review..."></textarea>
+                                </div>
+                                <button type="submit" name="newStatus" value="@((int)PropertyLeasingAPI.Models.LeaseStatus.Approved)" class="btn btn-success me-2">Approve</button>
+                                <button type="submit" name="newStatus" value="@((int)PropertyLeasingAPI.Models.LeaseStatus.Rejected)" class="btn btn-danger">Reject</button>
+                            </form>
+                            break;
+
+                        case PropertyLeasingAPI.Models.LeaseStatus.Approved:
+                            <form asp-action="UpdateStatus" method="post" class="d-inline">
+                                <input type="hidden" name="id" value="@Model.LeaseId" />
+                                <input type="hidden" name="newStatus" value="@((int)PropertyLeasingAPI.Models.LeaseStatus.Active)" />
+                                <button type="submit" class="btn btn-success">Activate Lease</button>
+                            </form>
+                            break;
+
+                        case PropertyLeasingAPI.Models.LeaseStatus.Active:
+                            <form asp-action="UpdateStatus" method="post" class="d-inline">
+                                <input type="hidden" name="id" value="@Model.LeaseId" />
+                                <input type="hidden" name="newStatus" value="@((int)PropertyLeasingAPI.Models.LeaseStatus.Renewal)" />
+                                <button type="submit" class="btn btn-warning me-2">Mark for Renewal</button>
+                            </form>
+                            <form asp-action="UpdateStatus" method="post" class="d-inline">
+                                <input type="hidden" name="id" value="@Model.LeaseId" />
+                                <input type="hidden" name="newStatus" value="@((int)PropertyLeasingAPI.Models.LeaseStatus.Terminated)" />
+                                <button type="submit" class="btn btn-danger">Terminate Lease</button>
+                            </form>
+                            break;
+
+                        case PropertyLeasingAPI.Models.LeaseStatus.Renewal:
+                            <form asp-action="UpdateStatus" method="post" class="d-inline">
+                                <input type="hidden" name="id" value="@Model.LeaseId" />
+                                <input type="hidden" name="newStatus" value="@((int)PropertyLeasingAPI.Models.LeaseStatus.Active)" />
+                                <button type="submit" class="btn btn-success me-2">Renew (Activate)</button>
+                            </form>
+                            <form asp-action="UpdateStatus" method="post" class="d-inline">
+                                <input type="hidden" name="id" value="@Model.LeaseId" />
+                                <input type="hidden" name="newStatus" value="@((int)PropertyLeasingAPI.Models.LeaseStatus.Terminated)" />
+                                <button type="submit" class="btn btn-danger">Terminate</button>
+                            </form>
+                            break;
+
+                        default:
+                            <p class="text-muted mb-0">No further actions available for this lease status.</p>
+                            break;
+                    }
+                </div>
+            </div>
+        }
+    </div>
 </div>
-<div>
-    <a asp-action="Edit" asp-route-id="@Model?.LeaseId">Edit</a> |
-    <a asp-action="Index">Back to List</a>
+
+<div class="mt-3">
+    @if (User.IsInRole("PropertyManager"))
+    {
+        <a asp-action="Edit" asp-route-id="@Model.LeaseId" class="btn btn-outline-warning">Edit</a>
+    }
+    <a asp-action="Index" class="btn btn-outline-secondary">Back to List</a>
 </div>

@@ -1,45 +1,50 @@
-﻿@model PropertyLeasingAPI.Models.Payment
-
+@model PropertyLeasingAPI.Models.Payment
 @{
-    ViewData["Title"] = "Delete";
+    ViewData["Title"] = "Delete Payment";
 }
 
-<h1>Delete</h1>
+<h2>Delete Payment</h2>
+<hr />
 
-<h3>Are you sure you want to delete this?</h3>
-<div>
-    <h4>Payment</h4>
-    <hr />
-    <dl class="row">
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Amount)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Amount)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.PaymentDate)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.PaymentDate)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.PaymentType)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.PaymentType)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Lease)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Lease.LeaseId)
-        </dd>
-    </dl>
-    
-    <form asp-action="Delete">
-        <input type="hidden" asp-for="PaymentId" />
-        <input type="submit" value="Delete" class="btn btn-danger" /> |
-        <a asp-action="Index">Back to List</a>
-    </form>
+<div class="alert alert-danger">
+    <strong>Are you sure you want to delete this payment?</strong>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-4">Tenant</dt>
+                    <dd class="col-sm-8">@Model.Lease?.Tenant?.FullName</dd>
+
+                    <dt class="col-sm-4">Property</dt>
+                    <dd class="col-sm-8">@Model.Lease?.Property?.Address</dd>
+
+                    <dt class="col-sm-4">Amount</dt>
+                    <dd class="col-sm-8 fw-bold">@Model.Amount.ToString("C")</dd>
+
+                    <dt class="col-sm-4">Due Date</dt>
+                    <dd class="col-sm-8">@Model.DueDate.ToString("dd MMM yyyy")</dd>
+
+                    <dt class="col-sm-4">Payment Date</dt>
+                    <dd class="col-sm-8">@(Model.PaymentDate.HasValue ? Model.PaymentDate.Value.ToString("dd MMM yyyy") : "Not paid")</dd>
+
+                    <dt class="col-sm-4">Type</dt>
+                    <dd class="col-sm-8">@Model.PaymentType</dd>
+
+                    <dt class="col-sm-4">Status</dt>
+                    <dd class="col-sm-8">@Model.Status</dd>
+                </dl>
+            </div>
+        </div>
+
+        <div class="mt-3 d-flex gap-2">
+            <form asp-action="Delete">
+                <input type="hidden" asp-for="PaymentId" />
+                <button type="submit" class="btn btn-danger">Confirm Delete</button>
+            </form>
+            <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+        </div>
+    </div>
 </div>

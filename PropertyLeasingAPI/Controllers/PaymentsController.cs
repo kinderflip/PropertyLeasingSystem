@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PropertyLeasingAPI.Data;
@@ -22,8 +22,12 @@ namespace PropertyLeasingAPI.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Payment>>> GetPayments()
         {
+            // Auto-flag overdue payments
+            await FlagOverduePayments();
+
             return await _context.Payments
                 .Include(p => p.Lease)
+                .OrderByDescending(p => p.DueDate)
                 .ToListAsync();
         }
 
@@ -45,11 +49,27 @@ namespace PropertyLeasingAPI.Controllers
         {
             return await _context.Payments
                 .Where(p => p.LeaseId == leaseId)
+                .OrderByDescending(p => p.DueDate)
+                .ToListAsync();
+        }
+
+        // GET: api/Payments/overdue
+        [HttpGet("overdue")]
+        public async Task<ActionResult<IEnumerable<Payment>>> GetOverduePayments()
+        {
+            await FlagOverduePayments();
+
+            return await _context.Payments
+                .Include(p => p.Lease)
+                    .ThenInclude(l => l!.Tenant)
+                .Where(p => p.Status == PaymentStatus.Overdue)
+                .OrderBy(p => p.DueDate)
                 .ToListAsync();
         }
 
         // POST: api/Payments
         [HttpPost]
+        [Authorize(Roles = "PropertyManager")]
         public async Task<ActionResult<Payment>> PostPayment(Payment payment)
         {
             _context.Payments.Add(payment);
@@ -60,6 +80,7 @@ namespace PropertyLeasingAPI.Controllers
 
         // DELETE: api/Payments/5
         [HttpDelete("{id}")]
+        [Authorize(Roles = "PropertyManager")]
         public async Task<IActionResult> DeletePayment(int id)
         {
             var payment = await _context.Payments.FindAsync(id);
@@ -68,6 +89,22 @@ namespace PropertyLeasingAPI.Controllers
             _context.Payments.Remove(payment);
             await _context.SaveChangesAsync();
             return NoContent();
+        }
+
+        // Auto-flag pending payments past their due date as Overdue
+        private async Task FlagOverduePayments()
+        {
+            var overduePayments = await _context.Payments
+                .Where(p => p.Status == PaymentStatus.Pending && p.DueDate < DateTime.Today)
+                .ToListAsync();
+
+            if (overduePayments.Any())
+            {
+                foreach (var p in overduePayments)
+                    p.Status = PaymentStatus.Overdue;
+
+                await _context.SaveChangesAsync();
+            }
         }
     }
 }

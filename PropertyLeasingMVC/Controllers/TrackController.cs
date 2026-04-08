@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 
 namespace PropertyLeasingMVC.Controllers
 {
@@ -19,18 +19,25 @@ namespace PropertyLeasingMVC.Controllers
 
         // POST: /Track
         [HttpPost]
-        public async Task<IActionResult> Index(int requestId)
+        public async Task<IActionResult> Index(int ticketId, string phone)
         {
-            if (requestId <= 0)
+            if (ticketId <= 0)
             {
-                ViewBag.Error = "Please enter a valid request ID.";
+                ViewBag.Error = "Please enter a valid ticket number.";
+                return View();
+            }
+
+            if (string.IsNullOrWhiteSpace(phone))
+            {
+                ViewBag.Error = "Please enter your registered phone number.";
                 return View();
             }
 
             try
             {
                 var client = _httpClientFactory.CreateClient("PropertyAPI");
-                var response = await client.GetAsync($"api/MaintenanceRequests/track/{requestId}");
+                var response = await client.GetAsync(
+                    $"api/MaintenanceRequests/track?ticketId={ticketId}&phone={Uri.EscapeDataString(phone)}");
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -40,7 +47,7 @@ namespace PropertyLeasingMVC.Controllers
                 }
                 else
                 {
-                    ViewBag.Error = $"No maintenance request found with ID #{requestId}.";
+                    ViewBag.Error = "No matching request found. Please verify your ticket number and phone number.";
                     return View();
                 }
             }
@@ -57,8 +64,11 @@ namespace PropertyLeasingMVC.Controllers
         public int RequestId { get; set; }
         public string Title { get; set; } = string.Empty;
         public string Category { get; set; } = string.Empty;
+        public string Priority { get; set; } = string.Empty;
         public string Status { get; set; } = string.Empty;
+        public string AssignedTo { get; set; } = string.Empty;
         public string DateSubmitted { get; set; } = string.Empty;
+        public string DateAssigned { get; set; } = string.Empty;
         public string DateResolved { get; set; } = string.Empty;
         public string PropertyAddress { get; set; } = string.Empty;
         public string PropertyCity { get; set; } = string.Empty;

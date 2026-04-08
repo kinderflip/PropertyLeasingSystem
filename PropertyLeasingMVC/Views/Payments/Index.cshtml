@@ -1,53 +1,102 @@
-﻿@model IEnumerable<PropertyLeasingAPI.Models.Payment>
-
+@model IEnumerable<PropertyLeasingAPI.Models.Payment>
+@using PropertyLeasingAPI.Models
 @{
-    ViewData["Title"] = "Index";
+    ViewData["Title"] = "Payments";
 }
 
-<h1>Index</h1>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Payments</h2>
+    @if (User.IsInRole("PropertyManager"))
+    {
+        <a asp-action="Create" class="btn btn-primary btn-sm">+ New Payment</a>
+    }
+</div>
 
-<p>
-    <a asp-action="Create">Create New</a>
-</p>
-<table class="table">
-    <thead>
-        <tr>
-            <th>
-                @Html.DisplayNameFor(model => model.Amount)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.PaymentDate)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.PaymentType)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Lease)
-            </th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-@foreach (var item in Model) {
-        <tr>
-            <td>
-                @Html.DisplayFor(modelItem => item.Amount)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.PaymentDate)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.PaymentType)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Lease.LeaseId)
-            </td>
-            <td>
-                <a asp-action="Edit" asp-route-id="@item.PaymentId">Edit</a> |
-                <a asp-action="Details" asp-route-id="@item.PaymentId">Details</a> |
-                <a asp-action="Delete" asp-route-id="@item.PaymentId">Delete</a>
-            </td>
-        </tr>
+<!-- Search & Filter -->
+<form method="get" class="row g-2 mb-3">
+    <div class="col-md-4">
+        <input type="text" name="searchString" value="@ViewBag.SearchString" class="form-control form-control-sm" placeholder="Search tenant or property..." />
+    </div>
+    <div class="col-md-2">
+        <select name="status" class="form-select form-select-sm">
+            <option value="">All Status</option>
+            @foreach (var s in Enum.GetValues<PaymentStatus>())
+            {
+                <option value="@s" selected="@(ViewBag.Status != null && (PaymentStatus)ViewBag.Status == s)">@s</option>
+            }
+        </select>
+    </div>
+    <div class="col-md-2">
+        <select name="type" class="form-select form-select-sm">
+            <option value="">All Types</option>
+            @foreach (var t in Enum.GetValues<PaymentType>())
+            {
+                <option value="@t" selected="@(ViewBag.Type != null && (PaymentType)ViewBag.Type == t)">@t</option>
+            }
+        </select>
+    </div>
+    <div class="col-md-2">
+        <button type="submit" class="btn btn-outline-secondary btn-sm">Filter</button>
+        <a asp-action="Index" class="btn btn-outline-dark btn-sm">Clear</a>
+    </div>
+</form>
+
+@if (!Model.Any())
+{
+    <div class="alert alert-info">No payments found.</div>
 }
-    </tbody>
-</table>
+else
+{
+    <div class="table-responsive">
+        <table class="table table-hover shadow-sm">
+            <thead class="table-dark">
+                <tr>
+                    <th>Tenant</th>
+                    <th>Property</th>
+                    <th>Amount</th>
+                    <th>Due Date</th>
+                    <th>Payment Date</th>
+                    <th>Type</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model)
+                {
+                    var statusClass = item.Status switch
+                    {
+                        PaymentStatus.Completed => "bg-success",
+                        PaymentStatus.Overdue => "bg-danger",
+                        PaymentStatus.Pending => "bg-warning text-dark",
+                        _ => "bg-secondary"
+                    };
+                    var rowClass = item.Status == PaymentStatus.Overdue ? "table-danger" : "";
+
+                    <tr class="@rowClass">
+                        <td>@item.Lease?.Tenant?.FullName</td>
+                        <td>@item.Lease?.Property?.Address</td>
+                        <td>@item.Amount.ToString("C")</td>
+                        <td>@item.DueDate.ToString("dd MMM yyyy")</td>
+                        <td>@(item.PaymentDate.HasValue ? item.PaymentDate.Value.ToString("dd MMM yyyy") : "-")</td>
+                        <td>@item.PaymentType</td>
+                        <td><span class="badge @statusClass">@item.Status</span></td>
+                        <td>
+                            <a asp-action="Details" asp-route-id="@item.PaymentId" class="btn btn-sm btn-outline-info">Details</a>
+                            @if (User.IsInRole("PropertyManager"))
+                            {
+                                <a asp-action="Edit" asp-route-id="@item.PaymentId" class="btn btn-sm btn-outline-primary">Edit</a>
+                                @if (item.Status != PaymentStatus.Completed)
+                                {
+                                    <form asp-action="MarkAsPaid" asp-route-id="@item.PaymentId" method="post" class="d-inline">
+                                        <button type="submit" class="btn btn-sm btn-success">Mark Paid</button>
+                                    </form>
+                                }
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
