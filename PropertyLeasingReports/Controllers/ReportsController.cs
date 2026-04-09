@@ -30,64 +30,72 @@ namespace PropertyLeasingReports.Controllers
         // GET: /Reports/Properties
         public async Task<IActionResult> Properties()
         {
-            var client = GetAuthenticatedClient();
-            var response = await client.GetAsync("api/Properties");
-
             var properties = new List<PropertyReport>();
-            if (response.IsSuccessStatusCode)
+            try
             {
-                var json = await response.Content.ReadAsStringAsync();
-                properties = JsonSerializer.Deserialize<List<PropertyReport>>(json, _jsonOptions) ?? new();
+                var client = GetAuthenticatedClient();
+                var response = await client.GetAsync("api/Properties");
+                if (response.IsSuccessStatusCode)
+                {
+                    var json = await response.Content.ReadAsStringAsync();
+                    properties = JsonSerializer.Deserialize<List<PropertyReport>>(json, _jsonOptions) ?? new();
+                }
             }
-
+            catch { }
             return View(properties);
         }
 
         // GET: /Reports/Maintenance
         public async Task<IActionResult> Maintenance()
         {
-            var client = GetAuthenticatedClient();
-            var response = await client.GetAsync("api/MaintenanceRequests");
-
             var requests = new List<MaintenanceReport>();
-            if (response.IsSuccessStatusCode)
+            try
             {
-                var json = await response.Content.ReadAsStringAsync();
-                requests = JsonSerializer.Deserialize<List<MaintenanceReport>>(json, _jsonOptions) ?? new();
+                var client = GetAuthenticatedClient();
+                var response = await client.GetAsync("api/MaintenanceRequests");
+                if (response.IsSuccessStatusCode)
+                {
+                    var json = await response.Content.ReadAsStringAsync();
+                    requests = JsonSerializer.Deserialize<List<MaintenanceReport>>(json, _jsonOptions) ?? new();
+                }
             }
-
+            catch { }
             return View(requests);
         }
 
         // GET: /Reports/Leases
         public async Task<IActionResult> Leases()
         {
-            var client = GetAuthenticatedClient();
-            var response = await client.GetAsync("api/Leases");
-
             var leases = new List<LeaseReport>();
-            if (response.IsSuccessStatusCode)
+            try
             {
-                var json = await response.Content.ReadAsStringAsync();
-                leases = JsonSerializer.Deserialize<List<LeaseReport>>(json, _jsonOptions) ?? new();
+                var client = GetAuthenticatedClient();
+                var response = await client.GetAsync("api/Leases");
+                if (response.IsSuccessStatusCode)
+                {
+                    var json = await response.Content.ReadAsStringAsync();
+                    leases = JsonSerializer.Deserialize<List<LeaseReport>>(json, _jsonOptions) ?? new();
+                }
             }
-
+            catch { }
             return View(leases);
         }
 
         // GET: /Reports/Payments
         public async Task<IActionResult> Payments()
         {
-            var client = GetAuthenticatedClient();
-            var response = await client.GetAsync("api/Payments");
-
             var payments = new List<PaymentReport>();
-            if (response.IsSuccessStatusCode)
+            try
             {
-                var json = await response.Content.ReadAsStringAsync();
-                payments = JsonSerializer.Deserialize<List<PaymentReport>>(json, _jsonOptions) ?? new();
+                var client = GetAuthenticatedClient();
+                var response = await client.GetAsync("api/Payments");
+                if (response.IsSuccessStatusCode)
+                {
+                    var json = await response.Content.ReadAsStringAsync();
+                    payments = JsonSerializer.Deserialize<List<PaymentReport>>(json, _jsonOptions) ?? new();
+                }
             }
-
+            catch { }
             return View(payments);
         }
     }
