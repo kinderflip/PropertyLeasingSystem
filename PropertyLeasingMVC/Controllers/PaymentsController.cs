@@ -20,9 +20,10 @@ namespace PropertyLeasingMVC.Controllers
         // GET: Payments
         public async Task<IActionResult> Index(string? searchString, PaymentStatus? status, PaymentType? type)
         {
-            // Auto-flag overdue payments
+            // Auto-flag overdue payments (normalise DueDate to date-only to avoid off-by-one)
+            var today = DateTime.Today;
             var overduePayments = await _context.Payments
-                .Where(p => p.Status == PaymentStatus.Pending && p.DueDate < DateTime.Today)
+                .Where(p => p.Status == PaymentStatus.Pending && p.DueDate.Date < today)
                 .ToListAsync();
 
             if (overduePayments.Any())
@@ -135,7 +136,7 @@ namespace PropertyLeasingMVC.Controllers
                 await NotificationsController.CreateNotification(_context,
                     lease.Tenant.UserId,
                     "Payment Received",
-                    $"Your payment of {payment.Amount:C} has been marked as paid.",
+                    $"Your payment of {payment.Amount:N3} BD has been marked as paid.",
                     NotificationType.PaymentReminder,
                     $"/Payments/Details/{payment.PaymentId}");
             }

@@ -65,7 +65,7 @@
             <thead class="table-dark">
                 <tr>
                     <th>Title</th>
-                    <th>Property</th>
+                    <th>Property / Unit</th>
                     <th>Tenant</th>
                     <th>Category</th>
                     <th>Priority</th>
@@ -80,7 +80,13 @@
                 {
                     <tr id="row-@item.RequestId">
                         <td>@item.Title</td>
-                        <td>@item.Property?.Address</td>
+                        <td>
+                            @item.Property?.Address
+                            @if (item.Unit != null)
+                            {
+                                <span class="badge bg-info ms-1">Unit @item.Unit.UnitNumber</span>
+                            }
+                        </td>
                         <td>@item.Tenant?.FullName</td>
                         <td>@item.Category</td>
                         <td>
@@ -144,7 +150,7 @@
             .withUrl("/maintenanceHub")
             .build();
 
-        connection.on("ReceiveStatusUpdate", function (requestId, status, title) {
+        connection.on("ReceiveStatusUpdate", function (requestId, status, title, unitNumber) {
             const badge = document.getElementById("status-" + requestId);
             if (badge) {
                 badge.innerText = status;
@@ -153,7 +159,8 @@
 
             const notification = document.getElementById("signalr-notification");
             const text = document.getElementById("notification-text");
-            text.innerText = '"' + title + '" status changed to ' + status;
+            var unitSuffix = unitNumber ? ' (Unit ' + unitNumber + ')' : '';
+            text.innerText = '"' + title + '"' + unitSuffix + ' status changed to ' + status;
             notification.classList.remove("d-none");
 
             setTimeout(() => notification.classList.add("d-none"), 5000);
@@ -168,6 +175,8 @@
             return "bg-secondary";
         }
 
-        connection.start().catch(err => console.error(err.toString()));
+        connection.start()
+            .then(() => connection.invoke("JoinLiveBoard"))
+            .catch(err => console.error(err.toString()));
     </script>
 }

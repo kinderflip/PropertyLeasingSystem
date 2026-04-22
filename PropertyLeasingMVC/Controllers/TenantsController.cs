@@ -45,6 +45,7 @@ namespace PropertyLeasingMVC.Controllers
         }
 
         // GET: Tenants/Create
+        [Authorize(Roles = "PropertyManager")]
         public IActionResult Create()
         {
             return View();
@@ -54,6 +55,7 @@ namespace PropertyLeasingMVC.Controllers
         // To protect from overposting attacks, enable the specific properties you want to bind to.
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
+        [Authorize(Roles = "PropertyManager")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("TenantId,FullName,Email,Phone,NationalId,UserId")] Tenant tenant)
         {
@@ -68,6 +70,7 @@ namespace PropertyLeasingMVC.Controllers
         }
 
         // GET: Tenants/Edit/5
+        [Authorize(Roles = "PropertyManager")]
         public async Task<IActionResult> Edit(int? id)
         {
             if (id == null)
@@ -87,6 +90,7 @@ namespace PropertyLeasingMVC.Controllers
         // To protect from overposting attacks, enable the specific properties you want to bind to.
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
+        [Authorize(Roles = "PropertyManager")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, [Bind("TenantId,FullName,Email,Phone,NationalId,UserId")] Tenant tenant)
         {
@@ -120,6 +124,7 @@ namespace PropertyLeasingMVC.Controllers
         }
 
         // GET: Tenants/Delete/5
+        [Authorize(Roles = "PropertyManager")]
         public async Task<IActionResult> Delete(int? id)
         {
             if (id == null)
@@ -139,6 +144,7 @@ namespace PropertyLeasingMVC.Controllers
 
         // POST: Tenants/Delete/5
         [HttpPost, ActionName("Delete")]
+        [Authorize(Roles = "PropertyManager")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {

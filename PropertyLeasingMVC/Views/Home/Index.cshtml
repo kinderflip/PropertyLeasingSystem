@@ -1,4 +1,4 @@
-﻿@model PropertyLeasingMVC.ViewModels.DashboardViewModel
+@model PropertyLeasingMVC.ViewModels.DashboardViewModel
 @{
     ViewData["Title"] = "Dashboard";
 }
@@ -8,57 +8,159 @@
     <span class="text-muted">@DateTime.Now.ToString("dddd, dd MMMM yyyy")</span>
 </div>
 
-<!-- Stats Cards Row -->
-<div class="row g-3 mb-4">
-    <div class="col-md-2">
-        <div class="card text-white bg-primary h-100 shadow-sm">
-            <div class="card-body text-center">
-                <h1 class="display-5 fw-bold">@Model.TotalProperties</h1>
-                <p class="mb-0">Total Properties</p>
+@if (Model.Role == "PropertyManager")
+{
+    <!-- Manager view: global portfolio stats -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-2">
+            <div class="card text-white bg-primary h-100 shadow-sm">
+                <div class="card-body text-center">
+                    <h1 class="display-5 fw-bold">@Model.TotalProperties</h1>
+                    <p class="mb-0">Properties</p>
+                    <small class="text-white-50">@Model.StandaloneProperties standalone · @Model.MultiUnitProperties multi-unit</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-white bg-secondary h-100 shadow-sm">
+                <div class="card-body text-center">
+                    <h1 class="display-5 fw-bold">@Model.TotalUnits</h1>
+                    <p class="mb-0">Units</p>
+                    <small class="text-white-50">@Model.AvailableUnits available</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-white bg-success h-100 shadow-sm">
+                <div class="card-body text-center">
+                    <h1 class="display-5 fw-bold">@Model.AvailableProperties</h1>
+                    <p class="mb-0">Available</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-white bg-info h-100 shadow-sm">
+                <div class="card-body text-center">
+                    <h1 class="display-5 fw-bold">@Model.TotalTenants</h1>
+                    <p class="mb-0">Tenants</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-white bg-dark h-100 shadow-sm">
+                <div class="card-body text-center">
+                    <h1 class="display-5 fw-bold">@Model.ActiveLeases</h1>
+                    <p class="mb-0">Active Leases</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-white bg-danger h-100 shadow-sm">
+                <div class="card-body text-center">
+                    <h1 class="display-5 fw-bold">@Model.PendingMaintenance</h1>
+                    <p class="mb-0">Pending Maintenance</p>
+                </div>
             </div>
         </div>
     </div>
-    <div class="col-md-2">
-        <div class="card text-white bg-success h-100 shadow-sm">
-            <div class="card-body text-center">
-                <h1 class="display-5 fw-bold">@Model.AvailableProperties</h1>
-                <p class="mb-0">Available</p>
+}
+else if (Model.Role == "MaintenanceStaff")
+{
+    <!-- Staff view: personal workload -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card text-white bg-info h-100 shadow-sm">
+                <div class="card-body text-center">
+                    <h1 class="display-5 fw-bold">@Model.AssignedToMe</h1>
+                    <p class="mb-0">Assigned to me</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-white bg-primary h-100 shadow-sm">
+                <div class="card-body text-center">
+                    <h1 class="display-5 fw-bold">@Model.InProgressByMe</h1>
+                    <p class="mb-0">In progress</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-white bg-success h-100 shadow-sm">
+                <div class="card-body text-center">
+                    <h1 class="display-5 fw-bold">@Model.CompletedByMe</h1>
+                    <p class="mb-0">Completed by me</p>
+                </div>
             </div>
         </div>
     </div>
-    <div class="col-md-2">
-        <div class="card text-white bg-warning h-100 shadow-sm">
-            <div class="card-body text-center">
-                <h1 class="display-5 fw-bold">@Model.LeasedProperties</h1>
-                <p class="mb-0">Leased</p>
+}
+else if (Model.Role == "Tenant")
+{
+    <!-- Tenant view: my leases & requests -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card text-white bg-dark h-100 shadow-sm">
+                <div class="card-body text-center">
+                    <h1 class="display-5 fw-bold">@Model.MyActiveLeases</h1>
+                    <p class="mb-0">My active leases</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-white bg-warning h-100 shadow-sm">
+                <div class="card-body text-center">
+                    <h1 class="display-5 fw-bold">@Model.MyOpenRequests</h1>
+                    <p class="mb-0">My open requests</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-white bg-danger h-100 shadow-sm">
+                <div class="card-body text-center">
+                    <h1 class="display-5 fw-bold">@Model.MyOverduePayments</h1>
+                    <p class="mb-0">Overdue payments</p>
+                </div>
             </div>
         </div>
     </div>
-    <div class="col-md-2">
-        <div class="card text-white bg-info h-100 shadow-sm">
-            <div class="card-body text-center">
-                <h1 class="display-5 fw-bold">@Model.TotalTenants</h1>
-                <p class="mb-0">Tenants</p>
+}
+else
+{
+    <!-- Guest view: invite to browse / register -->
+    <div class="row g-3 mb-4 justify-content-center">
+        <div class="col-md-4">
+            <div class="card text-white bg-success h-100 shadow-sm">
+                <div class="card-body text-center">
+                    <h1 class="display-5 fw-bold">@Model.AvailableUnits</h1>
+                    <p class="mb-0">Units available now</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-white bg-primary h-100 shadow-sm">
+                <div class="card-body text-center">
+                    <h1 class="display-5 fw-bold">@Model.AvailableProperties</h1>
+                    <p class="mb-0">Available properties</p>
+                </div>
             </div>
         </div>
     </div>
-    <div class="col-md-2">
-        <div class="card text-white bg-dark h-100 shadow-sm">
-            <div class="card-body text-center">
-                <h1 class="display-5 fw-bold">@Model.ActiveLeases</h1>
-                <p class="mb-0">Active Leases</p>
+
+    <div class="row justify-content-center mt-4">
+        <div class="col-md-8 text-center">
+            <div class="card shadow">
+                <div class="card-body p-5">
+                    <h3>Welcome to Property Leasing System</h3>
+                    <p class="text-muted">Browse available units, submit a maintenance request, or register as a tenant to apply for a lease.</p>
+                    <a asp-controller="Units" asp-action="Browse" class="btn btn-success me-2">🏢 Browse Units</a>
+                    <a asp-controller="Track" asp-action="Index" class="btn btn-outline-secondary me-2">🔍 Track Request</a>
+                    <a asp-controller="Account" asp-action="Login" class="btn btn-primary me-2">Login</a>
+                    <a asp-controller="Account" asp-action="Register" class="btn btn-outline-primary">Register</a>
+                </div>
             </div>
         </div>
     </div>
-    <div class="col-md-2">
-        <div class="card text-white bg-danger h-100 shadow-sm">
-            <div class="card-body text-center">
-                <h1 class="display-5 fw-bold">@Model.PendingMaintenance</h1>
-                <p class="mb-0">Pending Maintenance</p>
-            </div>
-        </div>
-    </div>
-</div>
+}
 
 @if (User.Identity!.IsAuthenticated)
 {
@@ -67,7 +169,7 @@
         <div class="col-md-6">
             <div class="card shadow-sm">
                 <div class="card-header bg-danger text-white d-flex justify-content-between">
-                    <span>🔧 Recent Maintenance Requests</span>
+                    <span>🔧 @(Model.Role == "MaintenanceStaff" ? "My Requests" : "Recent Maintenance Requests")</span>
                     <a asp-controller="MaintenanceRequests" asp-action="Index"
                        class="text-white text-decoration-none small">View All →</a>
                 </div>
@@ -78,7 +180,7 @@
                             <thead class="table-light">
                                 <tr>
                                     <th>Title</th>
-                                    <th>Property</th>
+                                    <th>Property / Unit</th>
                                     <th>Status</th>
                                 </tr>
                             </thead>
@@ -87,7 +189,13 @@
                                 {
                                     <tr>
                                         <td>@req.Title</td>
-                                        <td>@req.Property?.Address</td>
+                                        <td>
+                                            @req.Property?.Address
+                                            @if (req.Unit != null)
+                                            {
+                                                <span class="badge bg-info ms-1">Unit @req.Unit.UnitNumber</span>
+                                            }
+                                        </td>
                                         <td>
                                             @{
                                                 var reqBadge = req.Status switch
@@ -119,7 +227,7 @@
         <div class="col-md-6">
             <div class="card shadow-sm">
                 <div class="card-header bg-dark text-white d-flex justify-content-between">
-                    <span>📋 Recent Leases</span>
+                    <span>📋 @(Model.Role == "Tenant" ? "My Leases" : "Recent Leases")</span>
                     <a asp-controller="Leases" asp-action="Index"
                        class="text-white text-decoration-none small">View All →</a>
                 </div>
@@ -130,7 +238,8 @@
                             <thead class="table-light">
                                 <tr>
                                     <th>Tenant</th>
-                                    <th>Property</th>
+                                    <th>Property / Unit</th>
+                                    <th>Rent</th>
                                     <th>Status</th>
                                 </tr>
                             </thead>
@@ -139,7 +248,14 @@
                                 {
                                     <tr>
                                         <td>@lease.Tenant?.FullName</td>
-                                        <td>@lease.Property?.Address</td>
+                                        <td>
+                                            @lease.Property?.Address
+                                            @if (lease.Unit != null)
+                                            {
+                                                <span class="badge bg-info ms-1">Unit @lease.Unit.UnitNumber</span>
+                                            }
+                                        </td>
+                                        <td>@lease.MonthlyRent.ToString("N3") BD</td>
                                         <td>
                                             @if (lease.Status == PropertyLeasingAPI.Models.LeaseStatus.Active)
                                             {
@@ -151,7 +267,7 @@
                                             }
                                             else
                                             {
-                                                <span class="badge bg-danger">Terminated</span>
+                                                <span class="badge bg-danger">@lease.Status</span>
                                             }
                                         </td>
                                     </tr>
@@ -168,39 +284,42 @@
         </div>
     </div>
 
-    <!-- Quick Actions -->
-    <div class="row g-3 mt-2">
-        <div class="col-12">
-            <div class="card shadow-sm">
-                <div class="card-header">⚡ Quick Actions</div>
-                <div class="card-body">
-                    <a asp-controller="Properties" asp-action="Create"
-                       class="btn btn-primary me-2">+ Add Property</a>
-                    <a asp-controller="Tenants" asp-action="Create"
-                       class="btn btn-info me-2">+ Add Tenant</a>
-                    <a asp-controller="Leases" asp-action="Create"
-                       class="btn btn-dark me-2">+ New Lease</a>
-                    <a asp-controller="MaintenanceRequests" asp-action="Create"
-                       class="btn btn-danger me-2">+ Maintenance Request</a>
-                    <a asp-controller="Payments" asp-action="Create"
-                       class="btn btn-success">+ Record Payment</a>
+    @if (Model.Role == "PropertyManager")
+    {
+        <!-- Manager Quick Actions -->
+        <div class="row g-3 mt-2">
+            <div class="col-12">
+                <div class="card shadow-sm">
+                    <div class="card-header">⚡ Quick Actions</div>
+                    <div class="card-body">
+                        <a asp-controller="Properties" asp-action="Create"
+                           class="btn btn-primary me-2">+ Add Property</a>
+                        <a asp-controller="Tenants" asp-action="Create"
+                           class="btn btn-info me-2">+ Add Tenant</a>
+                        <a asp-controller="Leases" asp-action="Create"
+                           class="btn btn-dark me-2">+ New Lease</a>
+                        <a asp-controller="MaintenanceRequests" asp-action="Create"
+                           class="btn btn-danger me-2">+ Maintenance Request</a>
+                        <a asp-controller="Payments" asp-action="Create"
+                           class="btn btn-success">+ Record Payment</a>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
-}
-else
-{
-    <div class="row justify-content-center mt-4">
-        <div class="col-md-6 text-center">
-            <div class="card shadow">
-                <div class="card-body p-5">
-                    <h3>Welcome to Property Leasing System</h3>
-                    <p class="text-muted">Please login to access the dashboard and manage properties.</p>
-                    <a asp-controller="Account" asp-action="Login" class="btn btn-primary me-2">Login</a>
-                    <a asp-controller="Account" asp-action="Register" class="btn btn-outline-primary">Register</a>
+    }
+    else if (Model.Role == "Tenant")
+    {
+        <div class="row g-3 mt-2">
+            <div class="col-12">
+                <div class="card shadow-sm">
+                    <div class="card-header">⚡ Quick Actions</div>
+                    <div class="card-body">
+                        <a asp-controller="Units" asp-action="Browse" class="btn btn-success me-2">🏢 Browse Units</a>
+                        <a asp-controller="MaintenanceRequests" asp-action="Create" class="btn btn-danger me-2">+ New Maintenance Request</a>
+                        <a asp-controller="Leases" asp-action="Create" class="btn btn-dark">+ Apply for Lease</a>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
+    }
 }

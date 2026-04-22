@@ -45,7 +45,7 @@ using (var scope = app.Services.CreateScope())
 {
     var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
-    string adminEmail = "manager@property.com";
+    string adminEmail = "manager@property.bh";
     string adminPassword = "Manager123";
     if (await userManager.FindByEmailAsync(adminEmail) == null)
     {
@@ -53,13 +53,13 @@ using (var scope = app.Services.CreateScope())
         {
             UserName = adminEmail,
             Email = adminEmail,
-            FullName = "Property Manager",
+            FullName = "Khalid bin Isa Al Fakhro",
             EmailConfirmed = true
         };
         await userManager.CreateAsync(adminUser, adminPassword);
         await userManager.AddToRoleAsync(adminUser, "PropertyManager");
     }
-    string staffEmail = "staff@property.com";
+    string staffEmail = "staff@property.bh";
     string staffPassword = "Staff123";
     if (await userManager.FindByEmailAsync(staffEmail) == null)
     {
@@ -67,7 +67,7 @@ using (var scope = app.Services.CreateScope())
         {
             UserName = staffEmail,
             Email = staffEmail,
-            FullName = "Maintenance Staff",
+            FullName = "Salman bin Hamad Al Kanoo",
             EmailConfirmed = true
         };
         await userManager.CreateAsync(staffUser, staffPassword);

@@ -34,8 +34,9 @@ namespace PropertyLeasingAPI.Models
         [Display(Name = "Status")]
         public PaymentStatus Status { get; set; } = PaymentStatus.Pending;
 
+        // B7: compare on Date component to avoid off-by-one when DueDate carries a time.
         [NotMapped]
-        public bool IsOverdue => Status == PaymentStatus.Pending && DueDate < DateTime.Today;
+        public bool IsOverdue => Status == PaymentStatus.Pending && DueDate.Date < DateTime.Today;
 
         // Navigation property
         public Lease? Lease { get; set; }

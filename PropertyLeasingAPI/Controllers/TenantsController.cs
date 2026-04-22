@@ -39,6 +39,8 @@ namespace PropertyLeasingAPI.Controllers
         [Authorize(Roles = "PropertyManager")]
         public async Task<ActionResult<Tenant>> PostTenant(Tenant tenant)
         {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+
             _context.Tenants.Add(tenant);
             await _context.SaveChangesAsync();
             return CreatedAtAction(nameof(GetTenant),
@@ -51,6 +53,7 @@ namespace PropertyLeasingAPI.Controllers
         public async Task<IActionResult> PutTenant(int id, Tenant tenant)
         {
             if (id != tenant.TenantId) return BadRequest();
+            if (!ModelState.IsValid) return BadRequest(ModelState);
 
             _context.Entry(tenant).State = EntityState.Modified;
 

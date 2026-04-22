@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace PropertyLeasingAPI.Models
@@ -12,6 +12,10 @@ namespace PropertyLeasingAPI.Models
         [Required]
         [Display(Name = "Property")]
         public int PropertyId { get; set; }
+
+        // Null when the Property is standalone. Required when the Property has Units.
+        [Display(Name = "Unit")]
+        public int? UnitId { get; set; }
 
         [Required]
         [Display(Name = "Tenant")]
@@ -53,6 +57,7 @@ namespace PropertyLeasingAPI.Models
 
         // Navigation properties
         public Property? Property { get; set; }
+        public Unit? Unit { get; set; }
         public Tenant? Tenant { get; set; }
         public ICollection<Payment> Payments { get; set; } = new List<Payment>();
 
@@ -64,10 +69,14 @@ namespace PropertyLeasingAPI.Models
                     "End date must be after start date.",
                     new[] { nameof(EndDate) });
 
-            if (Status == LeaseStatus.Application && StartDate < DateTime.Today)
+            if (Status == LeaseStatus.Application && StartDate.Date < DateTime.Today)
                 yield return new ValidationResult(
                     "Start date cannot be in the past.",
                     new[] { nameof(StartDate) });
+
+            // Multi-unit vs standalone rule (enforced at service/controller level where Property can be loaded).
+            // The Lease itself cannot see Property.Units here because the graph may not be loaded,
+            // so the final check lives in LeasesController.Create / Put.
         }
     }
 }

@@ -1,63 +1,68 @@
-﻿@model PropertyLeasingAPI.Models.Property
-
+@model PropertyLeasingAPI.Models.Property
 @{
-    ViewData["Title"] = "Create";
+    ViewData["Title"] = "Create Property";
 }
 
-<h1>Create</h1>
+<h2>➕ Create Property</h2>
 
-<h4>Property</h4>
-<hr />
-<div class="row">
-    <div class="col-md-4">
-        <form asp-action="Create">
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-            <div class="form-group">
-                <label asp-for="Address" class="control-label"></label>
+<div class="alert alert-info">
+    <strong>Standalone vs multi-unit:</strong> leave <em>Bedrooms</em>, <em>Monthly Rent</em> and <em>Status</em>
+    <u>blank</u> if you plan to add Units to this property (e.g. an apartment block, office tower).
+    Fill them only for a single rentable property (e.g. a villa).
+</div>
+
+<form asp-action="Create" method="post" class="card shadow-sm">
+    <div class="card-body">
+        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+        <div class="row g-3">
+            <div class="col-md-8">
+                <label asp-for="Address" class="form-label"></label>
                 <input asp-for="Address" class="form-control" />
                 <span asp-validation-for="Address" class="text-danger"></span>
             </div>
-            <div class="form-group">
-                <label asp-for="City" class="control-label"></label>
+            <div class="col-md-4">
+                <label asp-for="City" class="form-label"></label>
                 <input asp-for="City" class="form-control" />
                 <span asp-validation-for="City" class="text-danger"></span>
             </div>
-            <div class="form-group">
-                <label asp-for="PropertyType" class="control-label"></label>
+
+            <div class="col-md-4">
+                <label asp-for="PropertyType" class="form-label"></label>
                 <select asp-for="PropertyType" class="form-control" asp-items="Html.GetEnumSelectList<PropertyLeasingAPI.Models.PropertyType>()"></select>
-                <span asp-validation-for="PropertyType" class="text-danger"></span>
             </div>
-            <div class="form-group">
-                <label asp-for="Bedrooms" class="control-label"></label>
-                <input asp-for="Bedrooms" class="form-control" />
+            <div class="col-md-4">
+                <label asp-for="Bedrooms" class="form-label">Bedrooms <small class="text-muted">(standalone only)</small></label>
+                <input asp-for="Bedrooms" class="form-control" placeholder="Leave blank if multi-unit" />
                 <span asp-validation-for="Bedrooms" class="text-danger"></span>
             </div>
-            <div class="form-group">
-                <label asp-for="MonthlyRent" class="control-label"></label>
-                <input asp-for="MonthlyRent" class="form-control" />
+            <div class="col-md-4">
+                <label asp-for="MonthlyRent" class="form-label">Monthly rent (BD) <small class="text-muted">(standalone only)</small></label>
+                <input asp-for="MonthlyRent" type="number" step="0.001" class="form-control" placeholder="Leave blank if multi-unit" />
                 <span asp-validation-for="MonthlyRent" class="text-danger"></span>
             </div>
-            <div class="form-group">
-                <label asp-for="Status" class="control-label"></label>
-                <select asp-for="Status" class="form-control" asp-items="Html.GetEnumSelectList<PropertyLeasingAPI.Models.PropertyStatus>()"></select>
-                <span asp-validation-for="Status" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="Description" class="control-label"></label>
-                <input asp-for="Description" class="form-control" />
-                <span asp-validation-for="Description" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <input type="submit" value="Create" class="btn btn-primary" />
-            </div>
-        </form>
-    </div>
-</div>
 
-<div>
-    <a asp-action="Index">Back to List</a>
-</div>
+            <div class="col-md-4">
+                <label asp-for="Status" class="form-label">Status <small class="text-muted">(standalone only)</small></label>
+                <select asp-for="Status" class="form-control">
+                    <option value="">-- None (multi-unit) --</option>
+                    <option value="0">Available</option>
+                    <option value="1">Leased</option>
+                    <option value="2">Under Maintenance</option>
+                </select>
+            </div>
+            <div class="col-md-8">
+                <label asp-for="Description" class="form-label"></label>
+                <input asp-for="Description" class="form-control" />
+            </div>
+        </div>
+    </div>
+    <div class="card-footer d-flex justify-content-between">
+        <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+        <button type="submit" class="btn btn-primary">Create Property</button>
+    </div>
+</form>
 
 @section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
 }

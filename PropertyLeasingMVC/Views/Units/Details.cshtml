@@ -1,0 +1,124 @@
+@model PropertyLeasingAPI.Models.Unit
+@{
+    ViewData["Title"] = $"Unit {Model.UnitNumber}";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>🏠 Unit @Model.UnitNumber</h2>
+    <div>
+        @if (User.IsInRole("PropertyManager"))
+        {
+            <a asp-action="Edit" asp-route-id="@Model.UnitId" class="btn btn-warning">Edit</a>
+            <a asp-action="Delete" asp-route-id="@Model.UnitId" class="btn btn-danger">Delete</a>
+        }
+        <a asp-action="Index" asp-route-propertyId="@Model.PropertyId" class="btn btn-secondary">Back</a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card shadow-sm mb-3">
+            <div class="card-header"><strong>Unit details</strong></div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-5">Property</dt>
+                    <dd class="col-sm-7">@Model.Property?.Address, @Model.Property?.City</dd>
+
+                    <dt class="col-sm-5">Unit number</dt>
+                    <dd class="col-sm-7">@Model.UnitNumber</dd>
+
+                    <dt class="col-sm-5">Type</dt>
+                    <dd class="col-sm-7">@Model.UnitType</dd>
+
+                    <dt class="col-sm-5">Size</dt>
+                    <dd class="col-sm-7">@Model.SizeSqm.ToString("N2") sqm</dd>
+
+                    <dt class="col-sm-5">Monthly rent</dt>
+                    <dd class="col-sm-7">@Model.MonthlyRent.ToString("N3") BD</dd>
+
+                    <dt class="col-sm-5">Status</dt>
+                    <dd class="col-sm-7">
+                        @if (Model.Status == PropertyLeasingAPI.Models.UnitStatus.Available)
+                        {
+                            <span class="badge bg-success">Available</span>
+                        }
+                        else if (Model.Status == PropertyLeasingAPI.Models.UnitStatus.Leased)
+                        {
+                            <span class="badge bg-warning">Leased</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-danger">Under Maintenance</span>
+                        }
+                    </dd>
+
+                    @if (!string.IsNullOrEmpty(Model.Amenities))
+                    {
+                        <dt class="col-sm-5">Amenities</dt>
+                        <dd class="col-sm-7">@Model.Amenities</dd>
+                    }
+
+                    @if (!string.IsNullOrEmpty(Model.Description))
+                    {
+                        <dt class="col-sm-5">Description</dt>
+                        <dd class="col-sm-7">@Model.Description</dd>
+                    }
+                </dl>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card shadow-sm mb-3">
+            <div class="card-header"><strong>Leases on this unit</strong></div>
+            <div class="card-body p-0">
+                @if (Model.Leases != null && Model.Leases.Any())
+                {
+                    <table class="table mb-0">
+                        <thead><tr><th>Tenant</th><th>Status</th><th>Dates</th></tr></thead>
+                        <tbody>
+                            @foreach (var l in Model.Leases.OrderByDescending(x => x.StartDate))
+                            {
+                                <tr>
+                                    <td>@l.Tenant?.FullName</td>
+                                    <td>@l.Status</td>
+                                    <td>@l.StartDate.ToString("dd MMM yyyy") – @l.EndDate.ToString("dd MMM yyyy")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+                else
+                {
+                    <p class="text-muted text-center py-3 mb-0">No leases yet.</p>
+                }
+            </div>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-header"><strong>Maintenance history</strong></div>
+            <div class="card-body p-0">
+                @if (Model.MaintenanceRequests != null && Model.MaintenanceRequests.Any())
+                {
+                    <table class="table mb-0">
+                        <thead><tr><th>Title</th><th>Status</th><th>Date</th></tr></thead>
+                        <tbody>
+                            @foreach (var m in Model.MaintenanceRequests.OrderByDescending(x => x.DateSubmitted))
+                            {
+                                <tr>
+                                    <td>@m.Title</td>
+                                    <td>@m.Status</td>
+                                    <td>@m.DateSubmitted.ToString("dd MMM yyyy")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+                else
+                {
+                    <p class="text-muted text-center py-3 mb-0">No maintenance history.</p>
+                }
+            </div>
+        </div>
+    </div>
+</div>
