@@ -1,19 +1,31 @@
-@model List<PropertyLeasingReports.Models.PropertyReport>
+@model PropertyLeasingReports.Models.PropertiesReportViewModel
 @{
     ViewData["Title"] = "Properties Report";
-    var statusNames = new[] { "Available", "Leased", "Under Maintenance" };
-    var typeNames = new[] { "Apartment", "Villa", "Shop", "Office" };
-    var statusColors = new[] { "success", "warning", "danger" };
+    var propertyStatusNames = new[] { "Available", "Leased", "Under Maintenance" };
+    var propertyStatusColors = new[] { "success", "warning", "danger" };
+    var unitStatusNames = new[] { "Available", "Leased", "Under Maintenance" };
+    var unitStatusColors = new[] { "success", "warning", "danger" };
+    var propertyTypeNames = new[] { "Apartment", "Villa", "Shop", "Office" };
+    var unitTypeNames = new[] { "Studio", "One Bedroom", "Two Bedroom", "Three Bedroom", "Office", "Shop", "Other" };
 
-    // Aggregate metrics
-    var totalProperties = Model.Count;
-    var availableCount = Model.Count(p => p.Status == 0);
-    var leasedCount = Model.Count(p => p.Status == 1);
-    var maintenanceCount = Model.Count(p => p.Status == 2);
-    var occupancyRate = totalProperties > 0 ? (double)leasedCount / totalProperties * 100 : 0;
-    var avgRent = Model.Any() ? Model.Average(p => p.MonthlyRent) : 0;
-    var totalPotentialRevenue = Model.Sum(p => p.MonthlyRent);
-    var activeRevenue = Model.Where(p => p.Status == 1).Sum(p => p.MonthlyRent);
+    var properties = Model.Properties;
+    var occupancyPct = Model.OccupancyRate * 100;
+
+    // Revenue metrics: combine standalone rent + unit rent
+    var standaloneRents = properties.Where(p => p.IsStandalone && p.MonthlyRent.HasValue).Select(p => p.MonthlyRent!.Value).ToList();
+    var unitRents = properties.SelectMany(p => p.Units).Select(u => u.MonthlyRent).ToList();
+    var allRents = standaloneRents.Concat(unitRents).ToList();
+    var avgRent = allRents.Any() ? allRents.Average() : 0m;
+    var totalPotentialRevenue = allRents.Sum();
+
+    var activeStandaloneRevenue = properties.Where(p => p.IsStandalone && p.Status == 1 && p.MonthlyRent.HasValue).Sum(p => p.MonthlyRent!.Value);
+    var activeUnitRevenue = properties.SelectMany(p => p.Units).Where(u => u.Status == 1).Sum(u => u.MonthlyRent);
+    var activeRevenue = activeStandaloneRevenue + activeUnitRevenue;
+}
+
+@if (ViewBag.Error != null)
+{
+    <div class="alert alert-warning">@ViewBag.Error</div>
 }
 
 <div class="d-flex justify-content-between align-items-center mb-4">
@@ -21,51 +33,52 @@
     <span class="text-muted">Generated: @DateTime.Now.ToString("dd MMM yyyy HH:mm")</span>
 </div>
 
-<!-- Status Summary Cards -->
+<!-- Portfolio composition -->
 <div class="row g-3 mb-4">
-    <div class="col-md-3">
-        <div class="card bg-success text-white text-center shadow-sm">
-            <div class="card-body">
-                <h2>@availableCount</h2>
-                <p class="mb-0">Available</p>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card bg-warning text-white text-center shadow-sm">
-            <div class="card-body">
-                <h2>@leasedCount</h2>
-                <p class="mb-0">Leased</p>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card bg-danger text-white text-center shadow-sm">
-            <div class="card-body">
-                <h2>@maintenanceCount</h2>
-                <p class="mb-0">Under Maintenance</p>
-            </div>
-        </div>
-    </div>
     <div class="col-md-3">
         <div class="card bg-dark text-white text-center shadow-sm">
             <div class="card-body">
-                <h2>@totalProperties</h2>
+                <h2>@Model.TotalProperties</h2>
                 <p class="mb-0">Total Properties</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white text-center shadow-sm">
+            <div class="card-body">
+                <h2>@Model.StandaloneCount</h2>
+                <p class="mb-0">Standalone</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-primary text-white text-center shadow-sm">
+            <div class="card-body">
+                <h2>@Model.MultiUnitCount</h2>
+                <p class="mb-0">Multi-unit Buildings</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-secondary text-white text-center shadow-sm">
+            <div class="card-body">
+                <h2>@Model.TotalUnits</h2>
+                <p class="mb-0">Total Units</p>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Aggregate Metrics -->
+<!-- Financial / Occupancy -->
 <div class="row g-3 mb-4">
     <div class="col-md-3">
         <div class="card shadow-sm border-start border-primary border-4">
             <div class="card-body">
                 <h6 class="text-muted">Occupancy Rate</h6>
-                <h3 class="mb-0">@occupancyRate.ToString("F1")%</h3>
+                <h3 class="mb-0">@occupancyPct.ToString("F1")%</h3>
+                <small class="text-muted">@(Model.LeasedStandalone + Model.LeasedUnits) leased / @(Model.StandaloneCount + Model.TotalUnits) rentable</small>
                 <div class="progress mt-2" style="height: 6px;">
-                    <div class="progress-bar bg-primary" style="width: @occupancyRate%"></div>
+                    <div class="progress-bar bg-primary" style="width: @occupancyPct%"></div>
                 </div>
             </div>
         </div>
@@ -74,7 +87,8 @@
         <div class="card shadow-sm border-start border-info border-4">
             <div class="card-body">
                 <h6 class="text-muted">Average Monthly Rent</h6>
-                <h3 class="mb-0">BD @avgRent.ToString("F2")</h3>
+                <h3 class="mb-0">@avgRent.ToString("N3") BD</h3>
+                <small class="text-muted">across standalone + units</small>
             </div>
         </div>
     </div>
@@ -82,7 +96,8 @@
         <div class="card shadow-sm border-start border-success border-4">
             <div class="card-body">
                 <h6 class="text-muted">Active Monthly Revenue</h6>
-                <h3 class="mb-0">BD @activeRevenue.ToString("F2")</h3>
+                <h3 class="mb-0">@activeRevenue.ToString("N3") BD</h3>
+                <small class="text-muted">leased right now</small>
             </div>
         </div>
     </div>
@@ -90,7 +105,8 @@
         <div class="card shadow-sm border-start border-secondary border-4">
             <div class="card-body">
                 <h6 class="text-muted">Total Potential Revenue</h6>
-                <h3 class="mb-0">BD @totalPotentialRevenue.ToString("F2")</h3>
+                <h3 class="mb-0">@totalPotentialRevenue.ToString("N3") BD</h3>
+                <small class="text-muted">if fully occupied</small>
             </div>
         </div>
     </div>
@@ -103,17 +119,19 @@
             <div class="card-header bg-light fw-bold">By Property Type</div>
             <div class="card-body p-0">
                 <table class="table table-sm mb-0">
-                    <thead><tr><th>Type</th><th>Count</th><th>Avg Rent</th></tr></thead>
+                    <thead><tr><th>Type</th><th>Count</th><th>Avg Rent (standalone)</th></tr></thead>
                     <tbody>
-                        @for (int i = 0; i < typeNames.Length; i++)
+                        @for (int i = 0; i < propertyTypeNames.Length; i++)
                         {
-                            var typeProps = Model.Where(p => p.PropertyType == i).ToList();
+                            var typeProps = properties.Where(p => p.PropertyType == i).ToList();
                             if (typeProps.Any())
                             {
+                                var standaloneRentsForType = typeProps.Where(p => p.IsStandalone && p.MonthlyRent.HasValue).Select(p => p.MonthlyRent!.Value).ToList();
+                                var avg = standaloneRentsForType.Any() ? standaloneRentsForType.Average() : 0m;
                                 <tr>
-                                    <td>@typeNames[i]</td>
+                                    <td>@propertyTypeNames[i]</td>
                                     <td><span class="badge bg-secondary">@typeProps.Count</span></td>
-                                    <td>BD @typeProps.Average(p => p.MonthlyRent).ToString("F2")</td>
+                                    <td>@(standaloneRentsForType.Any() ? avg.ToString("N3") + " BD" : "—")</td>
                                 </tr>
                             }
                         }
@@ -127,14 +145,14 @@
             <div class="card-header bg-light fw-bold">By City</div>
             <div class="card-body p-0">
                 <table class="table table-sm mb-0">
-                    <thead><tr><th>City</th><th>Count</th><th>Avg Rent</th></tr></thead>
+                    <thead><tr><th>City</th><th>Properties</th><th>Units</th></tr></thead>
                     <tbody>
-                        @foreach (var cityGroup in Model.GroupBy(p => p.City).OrderByDescending(g => g.Count()))
+                        @foreach (var cityGroup in properties.GroupBy(p => p.City).OrderByDescending(g => g.Count()))
                         {
                             <tr>
                                 <td>@cityGroup.Key</td>
                                 <td><span class="badge bg-secondary">@cityGroup.Count()</span></td>
-                                <td>BD @cityGroup.Average(p => p.MonthlyRent).ToString("F2")</td>
+                                <td><span class="badge bg-primary">@cityGroup.Sum(p => p.Units.Count)</span></td>
                             </tr>
                         }
                     </tbody>
@@ -155,27 +173,110 @@
                     <th>Address</th>
                     <th>City</th>
                     <th>Type</th>
-                    <th>Bedrooms</th>
-                    <th>Monthly Rent</th>
+                    <th>Mode</th>
+                    <th>Rent / Units</th>
                     <th>Status</th>
                 </tr>
             </thead>
             <tbody>
-                @foreach (var item in Model)
+                @foreach (var item in properties)
                 {
                     <tr>
                         <td>@item.PropertyId</td>
                         <td>@item.Address</td>
                         <td>@item.City</td>
-                        <td>@(item.PropertyType < typeNames.Length ? typeNames[item.PropertyType] : "Other")</td>
-                        <td>@item.Bedrooms</td>
-                        <td>BD @item.MonthlyRent.ToString("F2")</td>
+                        <td>@(item.PropertyType < propertyTypeNames.Length ? propertyTypeNames[item.PropertyType] : "Other")</td>
                         <td>
-                            <span class="badge bg-@(item.Status < statusColors.Length ? statusColors[item.Status] : "secondary")">
-                                @(item.Status < statusNames.Length ? statusNames[item.Status] : "Unknown")
-                            </span>
+                            @if (item.IsStandalone)
+                            {
+                                <span class="badge bg-info">Standalone</span>
+                                @if (item.Bedrooms.HasValue)
+                                {
+                                    <small class="text-muted ms-1">@item.Bedrooms bed</small>
+                                }
+                            }
+                            else
+                            {
+                                <span class="badge bg-primary">@item.Units.Count units</span>
+                            }
+                        </td>
+                        <td>
+                            @if (item.IsStandalone)
+                            {
+                                @(item.MonthlyRent.HasValue ? item.MonthlyRent.Value.ToString("N3") + " BD" : "—")
+                            }
+                            else if (item.Units.Any())
+                            {
+                                var min = item.Units.Min(u => u.MonthlyRent);
+                                var max = item.Units.Max(u => u.MonthlyRent);
+                                <text>@min.ToString("N3") – @max.ToString("N3") BD</text>
+                            }
+                            else
+                            {
+                                <text>—</text>
+                            }
+                        </td>
+                        <td>
+                            @if (item.IsStandalone && item.Status.HasValue)
+                            {
+                                var s = item.Status.Value;
+                                <span class="badge bg-@(s < propertyStatusColors.Length ? propertyStatusColors[s] : "secondary")">
+                                    @(s < propertyStatusNames.Length ? propertyStatusNames[s] : "Unknown")
+                                </span>
+                            }
+                            else if (!item.IsStandalone)
+                            {
+                                var leased = item.Units.Count(u => u.Status == 1);
+                                var avail = item.Units.Count(u => u.Status == 0);
+                                <small>
+                                    <span class="badge bg-success">@avail available</span>
+                                    <span class="badge bg-warning text-dark">@leased leased</span>
+                                </small>
+                            }
+                            else
+                            {
+                                <span class="text-muted">—</span>
+                            }
                         </td>
                     </tr>
+                    @if (!item.IsStandalone && item.Units.Any())
+                    {
+                        <tr>
+                            <td colspan="7" class="bg-light p-0">
+                                <table class="table table-sm mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th style="width:10%"></th>
+                                            <th>Unit #</th>
+                                            <th>Type</th>
+                                            <th>Size</th>
+                                            <th>Amenities</th>
+                                            <th>Monthly Rent</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var u in item.Units.OrderBy(u => u.UnitNumber))
+                                        {
+                                            <tr>
+                                                <td></td>
+                                                <td>@u.UnitNumber</td>
+                                                <td>@(u.UnitType < unitTypeNames.Length ? unitTypeNames[u.UnitType] : "Other")</td>
+                                                <td>@u.SizeSqm.ToString("0.##") sqm</td>
+                                                <td><small class="text-muted">@(u.Amenities ?? "—")</small></td>
+                                                <td>@u.MonthlyRent.ToString("N3") BD</td>
+                                                <td>
+                                                    <span class="badge bg-@(u.Status < unitStatusColors.Length ? unitStatusColors[u.Status] : "secondary")">
+                                                        @(u.Status < unitStatusNames.Length ? unitStatusNames[u.Status] : "Unknown")
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </td>
+                        </tr>
+                    }
                 }
             </tbody>
         </table>

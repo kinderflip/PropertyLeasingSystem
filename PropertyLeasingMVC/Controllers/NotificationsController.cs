@@ -33,17 +33,27 @@ namespace PropertyLeasingMVC.Controllers
 
         // POST: Notifications/MarkAsRead/5
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> MarkAsRead(int id)
         {
             var notification = await _context.Notifications.FindAsync(id);
-            if (notification != null)
+            if (notification == null)
             {
-                notification.IsRead = true;
-                await _context.SaveChangesAsync();
+                return NotFound();
             }
 
+            // Ownership check — don't let a user mark someone else's notification
+            var userId = _userManager.GetUserId(User);
+            if (notification.UserId != userId)
+            {
+                return Forbid();
+            }
+
+            notification.IsRead = true;
+            await _context.SaveChangesAsync();
+
             // If there's a link, redirect to it
-            if (notification?.LinkUrl != null)
+            if (!string.IsNullOrEmpty(notification.LinkUrl))
                 return Redirect(notification.LinkUrl);
 
             return RedirectToAction(nameof(Index));
@@ -51,6 +61,7 @@ namespace PropertyLeasingMVC.Controllers
 
         // POST: Notifications/MarkAllAsRead
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> MarkAllAsRead()
         {
             var userId = _userManager.GetUserId(User);

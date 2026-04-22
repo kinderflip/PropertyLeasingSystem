@@ -41,7 +41,7 @@
         <table class="table table-hover mb-0">
             <thead class="table-dark">
                 <tr>
-                    <th>Property</th>
+                    <th>Property / Unit</th>
                     <th>Tenant</th>
                     <th>Start Date</th>
                     <th>End Date</th>
@@ -55,11 +55,21 @@
                 @foreach (var item in Model)
                 {
                     <tr>
-                        <td>@item.Property?.Address</td>
+                        <td>
+                            @item.Property?.Address
+                            @if (item.Unit != null)
+                            {
+                                <span class="badge bg-info ms-1">Unit @item.Unit.UnitNumber</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary ms-1">Standalone</span>
+                            }
+                        </td>
                         <td>@item.Tenant?.FullName</td>
                         <td>@item.StartDate.ToString("dd MMM yyyy")</td>
                         <td>@item.EndDate.ToString("dd MMM yyyy")</td>
-                        <td>@item.MonthlyRent.ToString("C")</td>
+                        <td>@item.MonthlyRent.ToString("N3") BD</td>
                         <td>
                             @{
                                 var badgeClass = item.Status switch

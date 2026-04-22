@@ -31,6 +31,20 @@
                     <dt class="col-sm-4">Property</dt>
                     <dd class="col-sm-8">@Model.Property?.Address</dd>
 
+                    @if (Model.Unit != null)
+                    {
+                        <dt class="col-sm-4">Unit</dt>
+                        <dd class="col-sm-8">
+                            <span class="badge bg-info">Unit @Model.Unit.UnitNumber</span>
+                            <small class="text-muted ms-1">@Model.Unit.UnitType</small>
+                        </dd>
+                    }
+                    else
+                    {
+                        <dt class="col-sm-4">Unit</dt>
+                        <dd class="col-sm-8"><span class="badge bg-secondary">Standalone property (no unit)</span></dd>
+                    }
+
                     <dt class="col-sm-4">Tenant</dt>
                     <dd class="col-sm-8">@Model.Tenant?.FullName (@Model.Tenant?.Email)</dd>
 
@@ -41,7 +55,7 @@
                     <dd class="col-sm-8">@Model.EndDate.ToString("dd MMM yyyy")</dd>
 
                     <dt class="col-sm-4">Monthly Rent</dt>
-                    <dd class="col-sm-8">@Model.MonthlyRent.ToString("C")</dd>
+                    <dd class="col-sm-8">@Model.MonthlyRent.ToString("N3") BD</dd>
 
                     <dt class="col-sm-4">Application Date</dt>
                     <dd class="col-sm-8">@Model.ApplicationDate.ToString("dd MMM yyyy")</dd>

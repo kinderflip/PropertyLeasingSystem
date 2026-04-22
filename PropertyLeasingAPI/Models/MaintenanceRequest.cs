@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace PropertyLeasingAPI.Models
@@ -15,6 +15,10 @@ namespace PropertyLeasingAPI.Models
         [Required]
         [Display(Name = "Property")]
         public int PropertyId { get; set; }
+
+        // Null when the Property is standalone. Required when the Property has Units.
+        [Display(Name = "Unit")]
+        public int? UnitId { get; set; }
 
         [Required]
         [Display(Name = "Tenant")]
@@ -52,6 +56,7 @@ namespace PropertyLeasingAPI.Models
 
         // Navigation properties
         public Property? Property { get; set; }
+        public Unit? Unit { get; set; }
         public Tenant? Tenant { get; set; }
         public ApplicationUser? AssignedStaff { get; set; }
     }

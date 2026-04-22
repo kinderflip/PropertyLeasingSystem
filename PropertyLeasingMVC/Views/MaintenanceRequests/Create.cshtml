@@ -13,10 +13,19 @@
 
             <div class="mb-3">
                 <label asp-for="PropertyId" class="form-label">Property</label>
-                <select asp-for="PropertyId" asp-items="ViewBag.PropertyId" class="form-control">
+                <select asp-for="PropertyId" asp-items="ViewBag.PropertyId" class="form-control" id="PropertyId">
                     <option value="">-- Select Property --</option>
                 </select>
                 <span asp-validation-for="PropertyId" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3" id="unit-row">
+                <label asp-for="UnitId" class="form-label">Unit</label>
+                <select asp-for="UnitId" class="form-control" id="UnitId">
+                    <option value="">-- Select a property first --</option>
+                </select>
+                <small class="text-muted" id="unit-help">Required for multi-unit properties. Leave blank for standalone properties.</small>
+                <span asp-validation-for="UnitId" class="text-danger"></span>
             </div>
 
             <div class="mb-3">
@@ -70,4 +79,55 @@
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
+
+    <script>
+        (function () {
+            var $prop = document.getElementById('PropertyId');
+            var $unit = document.getElementById('UnitId');
+            var $row = document.getElementById('unit-row');
+            var $help = document.getElementById('unit-help');
+
+            if (!$prop || !$unit) return;
+
+            function reset(msg) {
+                $unit.innerHTML = '<option value="">' + msg + '</option>';
+            }
+
+            function loadUnits(propertyId) {
+                if (!propertyId) {
+                    reset('-- Select a property first --');
+                    $row.style.display = '';
+                    if ($help) $help.textContent = 'Required for multi-unit properties. Leave blank for standalone properties.';
+                    return;
+                }
+                reset('-- Loading... --');
+                fetch('/Units/ForPropertyJson?propertyId=' + encodeURIComponent(propertyId))
+                    .then(function (r) { return r.ok ? r.json() : []; })
+                    .then(function (units) {
+                        if (!units || units.length === 0) {
+                            reset('-- No units (standalone property) --');
+                            $row.style.display = 'none';
+                            $unit.value = '';
+                            if ($help) $help.textContent = 'Standalone property — no unit required.';
+                            return;
+                        }
+                        $row.style.display = '';
+                        var html = '<option value="">-- Select Unit --</option>';
+                        for (var i = 0; i < units.length; i++) {
+                            var u = units[i];
+                            html += '<option value="' + u.unitId + '">' + u.unitNumber + ' (' + u.unitType + ')</option>';
+                        }
+                        $unit.innerHTML = html;
+                        if ($help) $help.textContent = 'Select a unit from this multi-unit property.';
+                    })
+                    .catch(function () { reset('-- Error loading units --'); });
+            }
+
+            $prop.addEventListener('change', function () {
+                loadUnits($prop.value);
+            });
+
+            if ($prop.value) loadUnits($prop.value);
+        })();
+    </script>
 }

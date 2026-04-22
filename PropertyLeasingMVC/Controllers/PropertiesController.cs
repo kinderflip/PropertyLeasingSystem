@@ -24,7 +24,7 @@ namespace PropertyLeasingMVC.Controllers
         // GET: Properties
         public async Task<IActionResult> Index(string? searchString, PropertyStatus? status, PropertyType? type)
         {
-            var properties = _context.Properties.AsQueryable();
+            var properties = _context.Properties.Include(p => p.Units).AsQueryable();
 
             if (!string.IsNullOrEmpty(searchString))
                 properties = properties.Where(p =>
@@ -42,15 +42,19 @@ namespace PropertyLeasingMVC.Controllers
             ViewBag.Status = status;
             ViewBag.Type = type;
 
-            return View(await properties.ToListAsync());
+            return View(await properties.AsNoTracking().ToListAsync());
         }
 
-        // GET: Properties/Details/5
+        // GET: Properties/Details/5  — B10: eager-load Units + recent lease/maintenance
         public async Task<IActionResult> Details(int? id)
         {
             if (id == null) return NotFound();
 
             var property = await _context.Properties
+                .Include(p => p.Units)
+                .Include(p => p.Leases!).ThenInclude(l => l.Tenant)
+                .Include(p => p.MaintenanceRequests)
+                .AsNoTracking()
                 .FirstOrDefaultAsync(m => m.PropertyId == id);
 
             if (property == null) return NotFound();

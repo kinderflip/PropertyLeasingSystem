@@ -27,6 +27,11 @@
     var onTimeRate = completedPayments.Any() ? (double)onTimePayments / completedPayments.Count * 100 : 0;
 }
 
+@if (ViewBag.Error != null)
+{
+    <div class="alert alert-warning">@ViewBag.Error</div>
+}
+
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2>Payments Report</h2>
     <span class="text-muted">Generated: @DateTime.Now.ToString("dd MMM yyyy HH:mm")</span>
@@ -74,7 +79,7 @@
         <div class="card shadow-sm border-start border-success border-4">
             <div class="card-body">
                 <h6 class="text-muted">Total Collected</h6>
-                <h3 class="mb-0 text-success">BD @totalCollected.ToString("F2")</h3>
+                <h3 class="mb-0 text-success">@totalCollected.ToString("N3") BD</h3>
             </div>
         </div>
     </div>
@@ -82,7 +87,7 @@
         <div class="card shadow-sm border-start border-warning border-4">
             <div class="card-body">
                 <h6 class="text-muted">Pending Amount</h6>
-                <h3 class="mb-0 text-warning">BD @totalPending.ToString("F2")</h3>
+                <h3 class="mb-0 text-warning">@totalPending.ToString("N3") BD</h3>
             </div>
         </div>
     </div>
@@ -90,7 +95,7 @@
         <div class="card shadow-sm border-start border-danger border-4">
             <div class="card-body">
                 <h6 class="text-muted">Overdue Amount</h6>
-                <h3 class="mb-0 text-danger">BD @totalOverdue.ToString("F2")</h3>
+                <h3 class="mb-0 text-danger">@totalOverdue.ToString("N3") BD</h3>
             </div>
         </div>
     </div>
@@ -98,7 +103,7 @@
         <div class="card shadow-sm border-start border-dark border-4">
             <div class="card-body">
                 <h6 class="text-muted">Total Amount</h6>
-                <h3 class="mb-0">BD @totalAmount.ToString("F2")</h3>
+                <h3 class="mb-0">@totalAmount.ToString("N3") BD</h3>
             </div>
         </div>
     </div>
@@ -132,7 +137,7 @@
         <div class="card shadow-sm">
             <div class="card-body text-center">
                 <h6 class="text-muted">Average Payment</h6>
-                <h2 class="mb-1">BD @avgPaymentAmount.ToString("F2")</h2>
+                <h2 class="mb-1">@avgPaymentAmount.ToString("N3") BD</h2>
             </div>
         </div>
     </div>
@@ -155,9 +160,9 @@
                                 <tr>
                                     <td><span class="badge bg-@typeColors[i]">@typeNames[i]</span></td>
                                     <td>@typePayments.Count</td>
-                                    <td>BD @typePayments.Sum(p => p.Amount).ToString("F2")</td>
-                                    <td class="text-success">BD @typePayments.Where(p => p.Status == 1).Sum(p => p.Amount).ToString("F2")</td>
-                                    <td class="text-danger">BD @typePayments.Where(p => p.Status != 1).Sum(p => p.Amount).ToString("F2")</td>
+                                    <td>@typePayments.Sum(p => p.Amount).ToString("N3") BD</td>
+                                    <td class="text-success">@typePayments.Where(p => p.Status == 1).Sum(p => p.Amount).ToString("N3") BD</td>
+                                    <td class="text-danger">@typePayments.Where(p => p.Status != 1).Sum(p => p.Amount).ToString("N3") BD</td>
                                 </tr>
                             }
                         }
@@ -191,7 +196,7 @@
                     <tr class="@rowClass">
                         <td>@item.PaymentId</td>
                         <td>@item.LeaseId</td>
-                        <td>BD @item.Amount.ToString("F2")</td>
+                        <td>@item.Amount.ToString("N3") BD</td>
                         <td>@item.DueDate.ToString("dd MMM yyyy")</td>
                         <td>@(item.PaymentDate.HasValue ? item.PaymentDate.Value.ToString("dd MMM yyyy") : "-")</td>
                         <td>

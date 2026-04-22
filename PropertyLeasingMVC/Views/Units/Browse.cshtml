@@ -1,0 +1,69 @@
+@model IEnumerable<PropertyLeasingAPI.Models.Unit>
+@{
+    ViewData["Title"] = "Browse Available Units";
+}
+
+<div class="mb-3">
+    <h2>🔍 Browse Available Units</h2>
+    <p class="text-muted">Find your next home or office. All prices in Bahraini Dinar (BD).</p>
+</div>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <form asp-action="Browse" method="get" class="row g-2">
+            <div class="col-md-4">
+                <input type="text" name="city" value="@ViewBag.City" class="form-control" placeholder="City (e.g. Manama, Riffa)" />
+            </div>
+            <div class="col-md-3">
+                <select name="type" class="form-control">
+                    <option value="">-- Any Type --</option>
+                    <option value="0" selected="@(ViewBag.Type == PropertyLeasingAPI.Models.UnitType.Studio)">Studio</option>
+                    <option value="1" selected="@(ViewBag.Type == PropertyLeasingAPI.Models.UnitType.OneBedroom)">1 Bedroom</option>
+                    <option value="2" selected="@(ViewBag.Type == PropertyLeasingAPI.Models.UnitType.TwoBedroom)">2 Bedroom</option>
+                    <option value="3" selected="@(ViewBag.Type == PropertyLeasingAPI.Models.UnitType.ThreeBedroom)">3 Bedroom</option>
+                    <option value="4" selected="@(ViewBag.Type == PropertyLeasingAPI.Models.UnitType.Office)">Office</option>
+                    <option value="5" selected="@(ViewBag.Type == PropertyLeasingAPI.Models.UnitType.Shop)">Shop</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <input type="number" name="maxRent" value="@ViewBag.MaxRent" class="form-control" placeholder="Max rent (BD)" step="0.001" />
+            </div>
+            <div class="col-md-2 d-flex gap-2">
+                <button type="submit" class="btn btn-primary w-100">Search</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="row g-3">
+    @foreach (var u in Model)
+    {
+        <div class="col-md-6 col-lg-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <h5 class="card-title mb-1">@u.Property?.Address</h5>
+                        <span class="badge bg-success">Available</span>
+                    </div>
+                    <p class="text-muted small mb-2">@u.Property?.City</p>
+                    <p class="mb-1"><strong>Unit @u.UnitNumber</strong> · @u.UnitType · @u.SizeSqm.ToString("N2") sqm</p>
+                    @if (!string.IsNullOrEmpty(u.Amenities))
+                    {
+                        <p class="small text-muted mb-2">@u.Amenities</p>
+                    }
+                    <h4 class="text-primary">@u.MonthlyRent.ToString("N3") BD <small class="text-muted">/ month</small></h4>
+                    <a asp-action="Details" asp-route-id="@u.UnitId" class="btn btn-outline-primary btn-sm">View Details</a>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@if (!Model.Any())
+{
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <p class="text-muted text-center py-4 mb-0">No available units match your filters right now.</p>
+        </div>
+    </div>
+}

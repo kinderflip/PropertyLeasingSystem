@@ -22,24 +22,37 @@ namespace PropertyLeasingAPI.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Property>>> GetProperties()
         {
-            return await _context.Properties.ToListAsync();
+            return await _context.Properties
+                .Include(p => p.Units)
+                .AsNoTracking()
+                .ToListAsync();
         }
 
         // GET: api/Properties/5
         [HttpGet("{id}")]
         public async Task<ActionResult<Property>> GetProperty(int id)
         {
-            var property = await _context.Properties.FindAsync(id);
+            var property = await _context.Properties
+                .Include(p => p.Units)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(p => p.PropertyId == id);
             if (property == null) return NotFound();
             return property;
         }
 
         // GET: api/Properties/available
+        // Includes standalone Available properties AND properties that have at least one Available unit.
         [HttpGet("available")]
         public async Task<ActionResult<IEnumerable<Property>>> GetAvailableProperties()
         {
             return await _context.Properties
-                .Where(p => p.Status == PropertyStatus.Available)
+                .Include(p => p.Units)
+                .Where(p =>
+                    (p.Status == PropertyStatus.Available && !p.Units.Any())   // standalone, available
+                    ||
+                    p.Units.Any(u => u.Status == UnitStatus.Available)         // multi-unit w/ any available unit
+                )
+                .AsNoTracking()
                 .ToListAsync();
         }
 
@@ -48,6 +61,8 @@ namespace PropertyLeasingAPI.Controllers
         [Authorize(Roles = "PropertyManager")]
         public async Task<ActionResult<Property>> PostProperty(Property property)
         {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+
             _context.Properties.Add(property);
             await _context.SaveChangesAsync();
             return CreatedAtAction(nameof(GetProperty),
@@ -60,6 +75,7 @@ namespace PropertyLeasingAPI.Controllers
         public async Task<IActionResult> PutProperty(int id, Property property)
         {
             if (id != property.PropertyId) return BadRequest();
+            if (!ModelState.IsValid) return BadRequest(ModelState);
 
             _context.Entry(property).State = EntityState.Modified;
 

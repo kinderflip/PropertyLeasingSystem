@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -24,20 +25,24 @@ namespace PropertyLeasingAPI.Controllers
         {
             return await _context.MaintenanceRequests
                 .Include(m => m.Property)
+                .Include(m => m.Unit)
                 .Include(m => m.Tenant)
                 .Include(m => m.AssignedStaff)
+                .AsNoTracking()
                 .ToListAsync();
         }
 
         // GET: api/MaintenanceRequests/5
-        [AllowAnonymous]
+        // B2: was [AllowAnonymous] — removed so anon callers can't enumerate tenant data by ID.
         [HttpGet("{id}")]
         public async Task<ActionResult<MaintenanceRequest>> GetMaintenanceRequest(int id)
         {
             var request = await _context.MaintenanceRequests
                 .Include(m => m.Property)
+                .Include(m => m.Unit)
                 .Include(m => m.Tenant)
                 .Include(m => m.AssignedStaff)
+                .AsNoTracking()
                 .FirstOrDefaultAsync(m => m.RequestId == id);
 
             if (request == null) return NotFound();
@@ -54,15 +59,17 @@ namespace PropertyLeasingAPI.Controllers
 
             var request = await _context.MaintenanceRequests
                 .Include(m => m.Property)
+                .Include(m => m.Unit)
                 .Include(m => m.Tenant)
                 .Include(m => m.AssignedStaff)
+                .AsNoTracking()
                 .FirstOrDefaultAsync(m => m.RequestId == ticketId);
 
             if (request == null)
                 return NotFound(new { message = "No maintenance request found with that ticket number." });
 
-            // Verify phone number matches the tenant who submitted the request
-            if (request.Tenant == null || !request.Tenant.Phone.Replace(" ", "").Equals(phone.Replace(" ", ""), StringComparison.OrdinalIgnoreCase))
+            // B8: digits-only phone comparison (handles spaces, dashes, country-code formatting)
+            if (request.Tenant == null || !PhoneMatches(request.Tenant.Phone, phone))
                 return NotFound(new { message = "No matching request found. Please verify your ticket number and phone number." });
 
             return Ok(new
@@ -81,7 +88,8 @@ namespace PropertyLeasingAPI.Controllers
                     ? request.DateResolved.Value.ToString("dd MMM yyyy")
                     : "Not resolved yet",
                 propertyAddress = request.Property?.Address,
-                propertyCity = request.Property?.City
+                propertyCity = request.Property?.City,
+                unitNumber = request.Unit?.UnitNumber
             });
         }
 
@@ -91,9 +99,11 @@ namespace PropertyLeasingAPI.Controllers
         {
             return await _context.MaintenanceRequests
                 .Include(m => m.Property)
+                .Include(m => m.Unit)
                 .Include(m => m.Tenant)
                 .Include(m => m.AssignedStaff)
                 .Where(m => m.Status == MaintenanceStatus.Submitted || m.Status == MaintenanceStatus.Assigned)
+                .AsNoTracking()
                 .ToListAsync();
         }
 
@@ -102,6 +112,15 @@ namespace PropertyLeasingAPI.Controllers
         [Authorize(Roles = "PropertyManager,Tenant")]
         public async Task<ActionResult<MaintenanceRequest>> PostMaintenanceRequest(MaintenanceRequest request)
         {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+
+            var unitRuleError = await ValidateUnitVsStandalone(request.PropertyId, request.UnitId);
+            if (unitRuleError != null)
+            {
+                ModelState.AddModelError(nameof(request.UnitId), unitRuleError);
+                return BadRequest(ModelState);
+            }
+
             request.DateSubmitted = DateTime.Now;
             request.Status = MaintenanceStatus.Submitted;
             _context.MaintenanceRequests.Add(request);
@@ -116,6 +135,14 @@ namespace PropertyLeasingAPI.Controllers
         public async Task<IActionResult> PutMaintenanceRequest(int id, MaintenanceRequest request)
         {
             if (id != request.RequestId) return BadRequest();
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+
+            var unitRuleError = await ValidateUnitVsStandalone(request.PropertyId, request.UnitId);
+            if (unitRuleError != null)
+            {
+                ModelState.AddModelError(nameof(request.UnitId), unitRuleError);
+                return BadRequest(ModelState);
+            }
 
             // Auto-set dates based on status transitions
             if (request.Status == MaintenanceStatus.Assigned && request.DateAssigned == null)
@@ -152,6 +179,39 @@ namespace PropertyLeasingAPI.Controllers
             _context.MaintenanceRequests.Remove(request);
             await _context.SaveChangesAsync();
             return NoContent();
+        }
+
+        // ---- helpers ----
+
+        private async Task<string?> ValidateUnitVsStandalone(int propertyId, int? unitId)
+        {
+            var property = await _context.Properties
+                .Include(p => p.Units)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(p => p.PropertyId == propertyId);
+            if (property == null) return "Property not found.";
+
+            var hasUnits = property.Units != null && property.Units.Count > 0;
+
+            if (hasUnits && !unitId.HasValue)
+                return "This property has units. You must select a unit.";
+
+            if (!hasUnits && unitId.HasValue)
+                return "This property is standalone. Clear the unit selection.";
+
+            if (unitId.HasValue && !property.Units!.Any(u => u.UnitId == unitId.Value))
+                return "The selected unit does not belong to this property.";
+
+            return null;
+        }
+
+        // B8: digits-only comparison — immune to spaces, dashes, leading '+', '(', ')'.
+        private static bool PhoneMatches(string stored, string submitted)
+        {
+            if (string.IsNullOrEmpty(stored) || string.IsNullOrEmpty(submitted)) return false;
+            var a = Regex.Replace(stored, @"\D", "");
+            var b = Regex.Replace(submitted, @"\D", "");
+            return a.Length > 0 && a == b;
         }
     }
 }

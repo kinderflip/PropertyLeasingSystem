@@ -72,6 +72,8 @@ namespace PropertyLeasingAPI.Controllers
         [Authorize(Roles = "PropertyManager")]
         public async Task<ActionResult<Payment>> PostPayment(Payment payment)
         {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+
             _context.Payments.Add(payment);
             await _context.SaveChangesAsync();
             return CreatedAtAction(nameof(GetPayment),
@@ -91,14 +93,16 @@ namespace PropertyLeasingAPI.Controllers
             return NoContent();
         }
 
-        // Auto-flag pending payments past their due date as Overdue
+        // Auto-flag pending payments past their due date as Overdue.
+        // B7: compare on Date component to avoid off-by-one when DueDate has a time stamp.
         private async Task FlagOverduePayments()
         {
+            var today = DateTime.Today;
             var overduePayments = await _context.Payments
-                .Where(p => p.Status == PaymentStatus.Pending && p.DueDate < DateTime.Today)
+                .Where(p => p.Status == PaymentStatus.Pending && p.DueDate < today)
                 .ToListAsync();
 
-            if (overduePayments.Any())
+            if (overduePayments.Count > 0)
             {
                 foreach (var p in overduePayments)
                     p.Status = PaymentStatus.Overdue;

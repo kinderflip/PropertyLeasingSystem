@@ -19,6 +19,7 @@ namespace PropertyLeasingMVC.Controllers
 
         // POST: /Track
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Index(int ticketId, string phone)
         {
             if (ticketId <= 0)

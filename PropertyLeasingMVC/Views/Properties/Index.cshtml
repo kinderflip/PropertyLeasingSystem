@@ -53,8 +53,8 @@
                     <th>Address</th>
                     <th>City</th>
                     <th>Type</th>
-                    <th>Bedrooms</th>
-                    <th>Monthly Rent</th>
+                    <th>Units / Standalone</th>
+                    <th>Rent</th>
                     <th>Status</th>
                     <th>Actions</th>
                 </tr>
@@ -66,10 +66,40 @@
                         <td>@item.Address</td>
                         <td>@item.City</td>
                         <td>@item.PropertyType</td>
-                        <td>@item.Bedrooms</td>
-                        <td>BD @item.MonthlyRent.ToString("F2")</td>
                         <td>
-                            @if (item.Status == PropertyLeasingAPI.Models.PropertyStatus.Available)
+                            @if (item.Units != null && item.Units.Count > 0)
+                            {
+                                <span class="badge bg-info">@item.Units.Count unit(s)</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">Standalone</span>
+                                <small class="text-muted"> · @(item.Bedrooms?.ToString() ?? "—") BR</small>
+                            }
+                        </td>
+                        <td>
+                            @if (item.Units != null && item.Units.Count > 0)
+                            {
+                                var min = item.Units.Min(u => u.MonthlyRent);
+                                var max = item.Units.Max(u => u.MonthlyRent);
+                                <span>@min.ToString("N3") – @max.ToString("N3") BD</span>
+                            }
+                            else if (item.MonthlyRent.HasValue)
+                            {
+                                <span>@item.MonthlyRent.Value.ToString("N3") BD</span>
+                            }
+                            else
+                            {
+                                <span class="text-muted">—</span>
+                            }
+                        </td>
+                        <td>
+                            @if (item.Units != null && item.Units.Count > 0)
+                            {
+                                var availableUnits = item.Units.Count(u => u.Status == PropertyLeasingAPI.Models.UnitStatus.Available);
+                                <span class="badge bg-success">@availableUnits available</span>
+                            }
+                            else if (item.Status == PropertyLeasingAPI.Models.PropertyStatus.Available)
                             {
                                 <span class="badge bg-success">Available</span>
                             }
@@ -77,9 +107,13 @@
                             {
                                 <span class="badge bg-warning">Leased</span>
                             }
-                            else
+                            else if (item.Status == PropertyLeasingAPI.Models.PropertyStatus.UnderMaintenance)
                             {
                                 <span class="badge bg-danger">Under Maintenance</span>
+                            }
+                            else
+                            {
+                                <span class="text-muted">—</span>
                             }
                         </td>
                         <td>

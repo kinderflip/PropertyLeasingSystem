@@ -1,60 +1,176 @@
-﻿@model PropertyLeasingAPI.Models.Property
-
+@model PropertyLeasingAPI.Models.Property
 @{
-    ViewData["Title"] = "Details";
+    ViewData["Title"] = "Property Details";
+    var hasUnits = Model.Units != null && Model.Units.Count > 0;
 }
 
-<h1>Details</h1>
-
-<div>
-    <h4>Property</h4>
-    <hr />
-    <dl class="row">
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Address)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Address)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.City)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.City)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.PropertyType)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.PropertyType)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Bedrooms)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Bedrooms)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.MonthlyRent)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.MonthlyRent)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Status)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Status)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Description)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Description)
-        </dd>
-    </dl>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>🏠 Property Details</h2>
+    <div>
+        @if (User.IsInRole("PropertyManager"))
+        {
+            <a asp-action="Edit" asp-route-id="@Model.PropertyId" class="btn btn-warning">Edit</a>
+        }
+        <a asp-action="Index" class="btn btn-secondary">Back to List</a>
+    </div>
 </div>
-<div>
-    <a asp-action="Edit" asp-route-id="@Model?.PropertyId">Edit</a> |
-    <a asp-action="Index">Back to List</a>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card shadow-sm mb-3">
+            <div class="card-header"><strong>Property</strong>
+                @if (hasUnits)
+                {
+                    <span class="badge bg-info ms-2">Multi-unit · @Model.Units!.Count unit(s)</span>
+                }
+                else
+                {
+                    <span class="badge bg-secondary ms-2">Standalone</span>
+                }
+            </div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-4">Address</dt>
+                    <dd class="col-sm-8">@Model.Address</dd>
+
+                    <dt class="col-sm-4">City</dt>
+                    <dd class="col-sm-8">@Model.City</dd>
+
+                    <dt class="col-sm-4">Type</dt>
+                    <dd class="col-sm-8">@Model.PropertyType</dd>
+
+                    @if (!hasUnits)
+                    {
+                        <dt class="col-sm-4">Bedrooms</dt>
+                        <dd class="col-sm-8">@(Model.Bedrooms?.ToString() ?? "—")</dd>
+
+                        <dt class="col-sm-4">Monthly rent</dt>
+                        <dd class="col-sm-8">
+                            @(Model.MonthlyRent.HasValue ? Model.MonthlyRent.Value.ToString("N3") + " BD" : "—")
+                        </dd>
+
+                        <dt class="col-sm-4">Status</dt>
+                        <dd class="col-sm-8">
+                            @if (Model.Status == PropertyLeasingAPI.Models.PropertyStatus.Available)
+                            {
+                                <span class="badge bg-success">Available</span>
+                            }
+                            else if (Model.Status == PropertyLeasingAPI.Models.PropertyStatus.Leased)
+                            {
+                                <span class="badge bg-warning">Leased</span>
+                            }
+                            else if (Model.Status == PropertyLeasingAPI.Models.PropertyStatus.UnderMaintenance)
+                            {
+                                <span class="badge bg-danger">Under Maintenance</span>
+                            }
+                            else
+                            {
+                                <span class="text-muted">—</span>
+                            }
+                        </dd>
+                    }
+                    else
+                    {
+                        var min = Model.Units!.Min(u => u.MonthlyRent);
+                        var max = Model.Units!.Max(u => u.MonthlyRent);
+                        var avail = Model.Units!.Count(u => u.Status == PropertyLeasingAPI.Models.UnitStatus.Available);
+                        <dt class="col-sm-4">Rent range</dt>
+                        <dd class="col-sm-8">@min.ToString("N3") – @max.ToString("N3") BD</dd>
+
+                        <dt class="col-sm-4">Availability</dt>
+                        <dd class="col-sm-8">
+                            <span class="badge bg-success">@avail of @Model.Units!.Count available</span>
+                        </dd>
+                    }
+
+                    @if (!string.IsNullOrEmpty(Model.Description))
+                    {
+                        <dt class="col-sm-4">Description</dt>
+                        <dd class="col-sm-8">@Model.Description</dd>
+                    }
+                </dl>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card shadow-sm mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <strong>Units</strong>
+                @if (User.IsInRole("PropertyManager"))
+                {
+                    <a asp-controller="Units" asp-action="Create" asp-route-propertyId="@Model.PropertyId" class="btn btn-sm btn-primary">+ Add Unit</a>
+                }
+            </div>
+            <div class="card-body p-0">
+                @if (hasUnits)
+                {
+                    <table class="table mb-0">
+                        <thead><tr><th>Unit #</th><th>Type</th><th>Rent</th><th>Status</th><th></th></tr></thead>
+                        <tbody>
+                            @foreach (var u in Model.Units!.OrderBy(x => x.UnitNumber))
+                            {
+                                <tr>
+                                    <td><strong>@u.UnitNumber</strong></td>
+                                    <td>@u.UnitType</td>
+                                    <td>@u.MonthlyRent.ToString("N3") BD</td>
+                                    <td>
+                                        @if (u.Status == PropertyLeasingAPI.Models.UnitStatus.Available)
+                                        {
+                                            <span class="badge bg-success">Available</span>
+                                        }
+                                        else if (u.Status == PropertyLeasingAPI.Models.UnitStatus.Leased)
+                                        {
+                                            <span class="badge bg-warning">Leased</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-danger">Maintenance</span>
+                                        }
+                                    </td>
+                                    <td><a asp-controller="Units" asp-action="Details" asp-route-id="@u.UnitId" class="btn btn-sm btn-outline-primary">Details</a></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+                else
+                {
+                    <p class="text-muted text-center py-3 mb-0">
+                        This is a standalone property. It has no units.
+                        @if (User.IsInRole("PropertyManager"))
+                        {
+                            <br /><small>Adding a unit will convert it into a multi-unit property.</small>
+                        }
+                    </p>
+                }
+            </div>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-header"><strong>Recent leases</strong></div>
+            <div class="card-body p-0">
+                @if (Model.Leases != null && Model.Leases.Any())
+                {
+                    <table class="table mb-0">
+                        <thead><tr><th>Tenant</th><th>Status</th><th>Dates</th></tr></thead>
+                        <tbody>
+                            @foreach (var l in Model.Leases.OrderByDescending(x => x.StartDate).Take(5))
+                            {
+                                <tr>
+                                    <td>@l.Tenant?.FullName</td>
+                                    <td>@l.Status</td>
+                                    <td>@l.StartDate.ToString("dd MMM yyyy") – @l.EndDate.ToString("dd MMM yyyy")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+                else
+                {
+                    <p class="text-muted text-center py-3 mb-0">No leases yet.</p>
+                }
+            </div>
+        </div>
+    </div>
 </div>

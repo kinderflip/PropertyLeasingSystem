@@ -5,27 +5,46 @@
 -- ============================================
 
 -- ============================================
--- SP: Get Property Occupancy Summary
--- Returns count and percentage of properties by status
+-- SP: Get Property Occupancy Summary  (multi-unit + standalone aware)
+-- Mixes standalone property statuses with aggregated unit statuses.
 -- ============================================
 CREATE OR ALTER PROCEDURE [dbo].[sp_GetPropertyOccupancySummary]
 AS
 BEGIN
     SET NOCOUNT ON;
 
+    ;WITH Rentables AS (
+        -- Standalone properties (no units)
+        SELECT
+            p.[PropertyId] AS OwnerPropertyId,
+            p.[Status]     AS RentableStatus,
+            p.[MonthlyRent] AS RentableRent
+        FROM [Properties] p
+        WHERE NOT EXISTS (SELECT 1 FROM [Units] u WHERE u.[PropertyId] = p.[PropertyId])
+          AND p.[Status] IS NOT NULL
+
+        UNION ALL
+
+        -- Each unit inside a multi-unit property
+        SELECT
+            u.[PropertyId] AS OwnerPropertyId,
+            u.[Status]     AS RentableStatus,
+            u.[MonthlyRent] AS RentableRent
+        FROM [Units] u
+    )
     SELECT
-        CASE [Status]
+        CASE RentableStatus
             WHEN 0 THEN 'Available'
             WHEN 1 THEN 'Leased'
             WHEN 2 THEN 'Under Maintenance'
         END AS StatusName,
-        COUNT(*) AS PropertyCount,
-        CAST(COUNT(*) * 100.0 / NULLIF((SELECT COUNT(*) FROM [Properties]), 0) AS DECIMAL(5,2)) AS Percentage,
-        SUM([MonthlyRent]) AS TotalRent,
-        AVG([MonthlyRent]) AS AverageRent
-    FROM [Properties]
-    GROUP BY [Status]
-    ORDER BY [Status];
+        COUNT(*) AS RentableCount,
+        CAST(COUNT(*) * 100.0 / NULLIF((SELECT COUNT(*) FROM Rentables), 0) AS DECIMAL(5,2)) AS Percentage,
+        SUM(RentableRent) AS TotalRent,
+        AVG(RentableRent) AS AverageRent
+    FROM Rentables
+    GROUP BY RentableStatus
+    ORDER BY RentableStatus;
 END
 GO
 
@@ -55,11 +74,13 @@ BEGIN
         t.[Email] AS TenantEmail,
         pr.[Address] AS PropertyAddress,
         pr.[City] AS PropertyCity,
+        un.[UnitNumber],
         l.[LeaseId]
     FROM [Payments] p
-    INNER JOIN [Leases] l ON p.[LeaseId] = l.[LeaseId]
-    INNER JOIN [Tenants] t ON l.[TenantId] = t.[TenantId]
-    INNER JOIN [Properties] pr ON l.[PropertyId] = pr.[PropertyId]
+    INNER JOIN [Leases] l       ON p.[LeaseId]     = l.[LeaseId]
+    INNER JOIN [Tenants] t      ON l.[TenantId]    = t.[TenantId]
+    INNER JOIN [Properties] pr  ON l.[PropertyId]  = pr.[PropertyId]
+    LEFT  JOIN [Units] un       ON l.[UnitId]      = un.[UnitId]
     WHERE p.[Status] = 2
     ORDER BY p.[DueDate] ASC;
 END

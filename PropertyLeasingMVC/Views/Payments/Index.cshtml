@@ -76,7 +76,7 @@ else
                     <tr class="@rowClass">
                         <td>@item.Lease?.Tenant?.FullName</td>
                         <td>@item.Lease?.Property?.Address</td>
-                        <td>@item.Amount.ToString("C")</td>
+                        <td>@item.Amount.ToString("N3") BD</td>
                         <td>@item.DueDate.ToString("dd MMM yyyy")</td>
                         <td>@(item.PaymentDate.HasValue ? item.PaymentDate.Value.ToString("dd MMM yyyy") : "-")</td>
                         <td>@item.PaymentType</td>

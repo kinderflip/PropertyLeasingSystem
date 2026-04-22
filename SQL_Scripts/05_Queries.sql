@@ -5,13 +5,22 @@
 -- ============================================
 
 -- ============================================
--- 1. Dashboard Summary Query
--- Quick overview of all system metrics
+-- 1. Dashboard Summary Query  (multi-unit + standalone aware)
+-- Available == standalone with Status=0, OR has any unit with Status=0.
+-- Leased    == standalone-leased + leased units.
 -- ============================================
 SELECT
     (SELECT COUNT(*) FROM [Properties]) AS TotalProperties,
-    (SELECT COUNT(*) FROM [Properties] WHERE [Status] = 0) AS AvailableProperties,
-    (SELECT COUNT(*) FROM [Properties] WHERE [Status] = 1) AS LeasedProperties,
+    (SELECT COUNT(*) FROM [Properties] p
+      WHERE (p.[Status] = 0 AND NOT EXISTS (SELECT 1 FROM [Units] u WHERE u.[PropertyId] = p.[PropertyId]))
+         OR EXISTS (SELECT 1 FROM [Units] u WHERE u.[PropertyId] = p.[PropertyId] AND u.[Status] = 0)
+    ) AS AvailableProperties,
+    (
+        (SELECT COUNT(*) FROM [Properties] p
+           WHERE p.[Status] = 1 AND NOT EXISTS (SELECT 1 FROM [Units] u WHERE u.[PropertyId] = p.[PropertyId]))
+      + (SELECT COUNT(*) FROM [Units] WHERE [Status] = 1)
+    ) AS LeasedRentables,
+    (SELECT COUNT(*) FROM [Units]) AS TotalUnits,
     (SELECT COUNT(*) FROM [Tenants]) AS TotalTenants,
     (SELECT COUNT(*) FROM [Leases] WHERE [Status] = 4) AS ActiveLeases,
     (SELECT COUNT(*) FROM [Leases] WHERE [Status] IN (0, 1)) AS PendingApplications,
@@ -20,19 +29,48 @@ SELECT
     (SELECT ISNULL(SUM([Amount]), 0) FROM [Payments] WHERE [Status] = 1) AS TotalRevenue;
 
 -- ============================================
+-- 1b. Available Rentables (standalone properties + individual units)
+-- Matches the tenant "browse" experience.
+-- ============================================
+SELECT
+    p.[PropertyId],
+    p.[Address],
+    p.[City],
+    'Standalone' AS Mode,
+    NULL AS UnitNumber,
+    p.[MonthlyRent]
+FROM [Properties] p
+WHERE p.[Status] = 0
+  AND NOT EXISTS (SELECT 1 FROM [Units] u WHERE u.[PropertyId] = p.[PropertyId])
+UNION ALL
+SELECT
+    p.[PropertyId],
+    p.[Address],
+    p.[City],
+    'Unit' AS Mode,
+    u.[UnitNumber],
+    u.[MonthlyRent]
+FROM [Units] u
+INNER JOIN [Properties] p ON u.[PropertyId] = p.[PropertyId]
+WHERE u.[Status] = 0
+ORDER BY [City], [Address];
+
+-- ============================================
 -- 2. Leases Expiring Within 30 Days
 -- Helps property managers plan renewals
 -- ============================================
 SELECT
     l.[LeaseId],
     p.[Address],
+    u.[UnitNumber],
     t.[FullName] AS TenantName,
     l.[EndDate],
     DATEDIFF(DAY, GETDATE(), l.[EndDate]) AS DaysUntilExpiry,
     l.[MonthlyRent]
 FROM [Leases] l
 INNER JOIN [Properties] p ON l.[PropertyId] = p.[PropertyId]
-INNER JOIN [Tenants] t ON l.[TenantId] = t.[TenantId]
+LEFT  JOIN [Units] u      ON l.[UnitId]     = u.[UnitId]
+INNER JOIN [Tenants] t    ON l.[TenantId]   = t.[TenantId]
 WHERE l.[Status] = 4
   AND l.[EndDate] BETWEEN GETDATE() AND DATEADD(DAY, 30, GETDATE())
 ORDER BY l.[EndDate];
@@ -46,12 +84,14 @@ SELECT
     CASE m.[Priority] WHEN 2 THEN 'High' WHEN 3 THEN 'Urgent' END AS Priority,
     CASE m.[Status] WHEN 0 THEN 'Submitted' WHEN 1 THEN 'Assigned' WHEN 2 THEN 'In Progress' END AS Status,
     p.[Address] AS PropertyAddress,
+    u.[UnitNumber],
     t.[FullName] AS TenantName,
     m.[DateSubmitted],
     DATEDIFF(DAY, m.[DateSubmitted], GETDATE()) AS DaysOpen
 FROM [MaintenanceRequests] m
 INNER JOIN [Properties] p ON m.[PropertyId] = p.[PropertyId]
-INNER JOIN [Tenants] t ON m.[TenantId] = t.[TenantId]
+LEFT  JOIN [Units] u      ON m.[UnitId]     = u.[UnitId]
+INNER JOIN [Tenants] t    ON m.[TenantId]   = t.[TenantId]
 WHERE m.[Status] IN (0, 1, 2)
   AND m.[Priority] IN (2, 3)
 ORDER BY m.[Priority] DESC, m.[DateSubmitted] ASC;
@@ -92,8 +132,8 @@ HAVING SUM(pay.[Amount]) > 0
 ORDER BY SUM(pay.[Amount]) DESC;
 
 -- ============================================
--- 6. Property Performance Report
--- Revenue generated per property
+-- 6. Property Performance Report  (multi-unit aware)
+--   ListedRent = standalone rent, OR SUM of unit rents for multi-unit.
 -- ============================================
 SELECT
     p.[PropertyId],
@@ -105,14 +145,15 @@ SELECT
         WHEN 2 THEN 'Shop'
         WHEN 3 THEN 'Office'
     END AS PropertyType,
-    p.[MonthlyRent] AS ListedRent,
-    COUNT(DISTINCT l.[LeaseId]) AS TotalLeases,
-    ISNULL(SUM(CASE WHEN pay.[Status] = 1 THEN pay.[Amount] END), 0) AS RevenueCollected,
-    COUNT(DISTINCT m.[RequestId]) AS MaintenanceRequests
+    CASE WHEN EXISTS (SELECT 1 FROM [Units] u WHERE u.[PropertyId] = p.[PropertyId])
+         THEN 'Multi-unit' ELSE 'Standalone' END AS Mode,
+    (SELECT COUNT(*) FROM [Units] u WHERE u.[PropertyId] = p.[PropertyId]) AS UnitsCount,
+    ISNULL(p.[MonthlyRent], (SELECT SUM(u.[MonthlyRent]) FROM [Units] u WHERE u.[PropertyId] = p.[PropertyId])) AS ListedRent,
+    (SELECT COUNT(*) FROM [Leases] l WHERE l.[PropertyId] = p.[PropertyId]) AS TotalLeases,
+    ISNULL((SELECT SUM(pay.[Amount]) FROM [Leases] l
+            INNER JOIN [Payments] pay ON l.[LeaseId] = pay.[LeaseId]
+            WHERE l.[PropertyId] = p.[PropertyId] AND pay.[Status] = 1), 0) AS RevenueCollected,
+    (SELECT COUNT(*) FROM [MaintenanceRequests] m WHERE m.[PropertyId] = p.[PropertyId]) AS MaintenanceRequests
 FROM [Properties] p
-LEFT JOIN [Leases] l ON p.[PropertyId] = l.[PropertyId]
-LEFT JOIN [Payments] pay ON l.[LeaseId] = pay.[LeaseId]
-LEFT JOIN [MaintenanceRequests] m ON p.[PropertyId] = m.[PropertyId]
-GROUP BY p.[PropertyId], p.[Address], p.[City], p.[PropertyType], p.[MonthlyRent]
 ORDER BY RevenueCollected DESC;
 GO

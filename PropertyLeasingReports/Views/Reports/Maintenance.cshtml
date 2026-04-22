@@ -23,6 +23,11 @@
     var highCount = Model.Count(m => m.Priority == 2);
 }
 
+@if (ViewBag.Error != null)
+{
+    <div class="alert alert-warning">@ViewBag.Error</div>
+}
+
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2>Maintenance Report</h2>
     <span class="text-muted">Generated: @DateTime.Now.ToString("dd MMM yyyy HH:mm")</span>
@@ -143,6 +148,7 @@
                 <tr>
                     <th>#</th>
                     <th>Title</th>
+                    <th>Property / Unit</th>
                     <th>Category</th>
                     <th>Priority</th>
                     <th>Status</th>
@@ -157,6 +163,17 @@
                     <tr>
                         <td>@item.RequestId</td>
                         <td>@item.Title</td>
+                        <td>
+                            #@item.PropertyId
+                            @if (item.UnitId.HasValue)
+                            {
+                                <span class="badge bg-info ms-1">Unit #@item.UnitId</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary ms-1">Standalone</span>
+                            }
+                        </td>
                         <td>@(item.Category < categoryNames.Length ? categoryNames[item.Category] : "Other")</td>
                         <td>
                             <span class="badge bg-@(item.Priority < priorityColors.Length ? priorityColors[item.Priority] : "secondary")">
