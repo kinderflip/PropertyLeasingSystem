@@ -1,0 +1,18 @@
+@{
+    ViewData["Title"] = "Access Denied";
+}
+
+<div class="row justify-content-center mt-5">
+    <div class="col-md-6 text-center">
+        <div class="card shadow border-danger">
+            <div class="card-body p-5">
+                <h1 class="text-danger display-1">403</h1>
+                <h3>Access Denied</h3>
+                <p class="text-muted">This portal is restricted to Property Managers.</p>
+                <form asp-controller="Account" asp-action="Logout" method="post" class="d-inline">
+                    <button type="submit" class="btn btn-outline-secondary">Sign Out</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

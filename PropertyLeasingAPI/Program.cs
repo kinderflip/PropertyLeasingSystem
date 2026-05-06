@@ -89,8 +89,36 @@ builder.Services.AddCors(options =>
     });
 });
 var app = builder.Build();
-app.UseSwagger();
-app.UseSwaggerUI();
+
+// C5: catch-all exception handler returns a clean JSON 500 instead of a stack trace.
+// In development we still want the raw developer page for debugging.
+if (app.Environment.IsDevelopment())
+{
+    app.UseDeveloperExceptionPage();
+}
+else
+{
+    app.UseExceptionHandler(handler =>
+    {
+        handler.Run(async context =>
+        {
+            context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsync("{\"error\":\"An internal server error occurred.\"}");
+        });
+    });
+    app.UseHsts();
+}
+
+// C6: Swagger is no longer published to the public internet by default.
+// Set the env var EnableSwagger=true in Azure App Settings if the marker
+// needs to exercise the API surface during the demo.
+if (app.Environment.IsDevelopment() || builder.Configuration.GetValue<bool>("EnableSwagger"))
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+
 app.UseHttpsRedirection();
 app.UseCors("AllowMVC");
 app.UseAuthentication();

@@ -25,7 +25,9 @@ namespace PropertyLeasingReports.Controllers
         }
 
         // POST: /Account/Login
+        // C4: CSRF-protected. C7: rejects non-PropertyManager users at the door.
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Login(string email, string password)
         {
             try
@@ -45,14 +47,19 @@ namespace PropertyLeasingReports.Controllers
                     var result = JsonSerializer.Deserialize<LoginResponse>(json,
                         new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
-                    if (result != null)
+                    if (result != null && !string.IsNullOrEmpty(result.Token))
                     {
-                        // Store JWT token in session
+                        // C7: the Reports portal is a senior-business-role tool only.
+                        if (!result.Roles.Contains("PropertyManager"))
+                        {
+                            ViewBag.Error = "This portal is restricted to Property Managers.";
+                            return View();
+                        }
+
                         HttpContext.Session.SetString("JwtToken", result.Token);
                         HttpContext.Session.SetString("UserEmail", result.Email);
                         HttpContext.Session.SetString("FullName", result.FullName);
 
-                        // Create cookie claims
                         var claims = new List<Claim>
                         {
                             new Claim(ClaimTypes.Name, result.Email),
@@ -84,7 +91,9 @@ namespace PropertyLeasingReports.Controllers
         }
 
         // POST: /Account/Logout
+        // C4: CSRF-protected so a malicious page can't force-logout users.
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Logout()
         {
             HttpContext.Session.Clear();
