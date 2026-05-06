@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -20,20 +21,40 @@ namespace PropertyLeasingAPI.Controllers
         }
 
         // GET: api/MaintenanceRequests
+        // C3: Manager → all; Tenant → own; MaintenanceStaff → assigned-to-them only.
         [HttpGet]
         public async Task<ActionResult<IEnumerable<MaintenanceRequest>>> GetMaintenanceRequests()
         {
-            return await _context.MaintenanceRequests
+            var query = _context.MaintenanceRequests
                 .Include(m => m.Property)
                 .Include(m => m.Unit)
                 .Include(m => m.Tenant)
                 .Include(m => m.AssignedStaff)
                 .AsNoTracking()
-                .ToListAsync();
+                .AsQueryable();
+
+            if (User.IsInRole("PropertyManager"))
+                return await query.ToListAsync();
+
+            if (User.IsInRole("MaintenanceStaff"))
+            {
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                return await query.Where(m => m.AssignedStaffId == userId).ToListAsync();
+            }
+
+            if (User.IsInRole("Tenant"))
+            {
+                var myTenantId = await GetCallerTenantId();
+                if (myTenantId == null) return Ok(new List<MaintenanceRequest>());
+                return await query.Where(m => m.TenantId == myTenantId).ToListAsync();
+            }
+
+            return Forbid();
         }
 
         // GET: api/MaintenanceRequests/5
         // B2: was [AllowAnonymous] — removed so anon callers can't enumerate tenant data by ID.
+        // C3: caller must own the request, be assigned to it, or be a PropertyManager.
         [HttpGet("{id}")]
         public async Task<ActionResult<MaintenanceRequest>> GetMaintenanceRequest(int id)
         {
@@ -46,6 +67,18 @@ namespace PropertyLeasingAPI.Controllers
                 .FirstOrDefaultAsync(m => m.RequestId == id);
 
             if (request == null) return NotFound();
+
+            if (!User.IsInRole("PropertyManager"))
+            {
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                var myTenantId = await GetCallerTenantId();
+
+                bool isOwner   = myTenantId != null && request.TenantId == myTenantId;
+                bool isAssignee = !string.IsNullOrEmpty(userId) && request.AssignedStaffId == userId;
+
+                if (!isOwner && !isAssignee) return Forbid();
+            }
+
             return request;
         }
 
@@ -93,8 +126,9 @@ namespace PropertyLeasingAPI.Controllers
             });
         }
 
-        // GET: api/MaintenanceRequests/pending
+        // GET: api/MaintenanceRequests/pending — manager + staff triage view.
         [HttpGet("pending")]
+        [Authorize(Roles = "PropertyManager,MaintenanceStaff")]
         public async Task<ActionResult<IEnumerable<MaintenanceRequest>>> GetPendingRequests()
         {
             return await _context.MaintenanceRequests
@@ -212,6 +246,17 @@ namespace PropertyLeasingAPI.Controllers
             var a = Regex.Replace(stored, @"\D", "");
             var b = Regex.Replace(submitted, @"\D", "");
             return a.Length > 0 && a == b;
+        }
+
+        // C3: resolve the caller's TenantId via their ApplicationUser.Id claim.
+        private async Task<int?> GetCallerTenantId()
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId)) return null;
+            return await _context.Tenants
+                .Where(t => t.UserId == userId)
+                .Select(t => (int?)t.TenantId)
+                .FirstOrDefaultAsync();
         }
     }
 }

@@ -14,6 +14,17 @@ namespace PropertyLeasingMVC.ViewModels
         public required string Email { get; set; }
 
         [Required]
+        [Phone]
+        [StringLength(20)]
+        [Display(Name = "Phone Number")]
+        public required string Phone { get; set; }
+
+        [Required]
+        [StringLength(20)]
+        [Display(Name = "National ID (CPR)")]
+        public required string NationalId { get; set; }
+
+        [Required]
         [DataType(DataType.Password)]
         [StringLength(100, MinimumLength = 6)]
         public required string Password { get; set; }

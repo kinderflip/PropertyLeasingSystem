@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PropertyLeasingAPI.Data;
@@ -18,19 +19,30 @@ namespace PropertyLeasingAPI.Controllers
             _context = context;
         }
 
-        // GET: api/Tenants
+        // GET: api/Tenants — manager-only directory.
+        // C3: tenants directory was readable by every authenticated role; lock to PropertyManager.
         [HttpGet]
+        [Authorize(Roles = "PropertyManager")]
         public async Task<ActionResult<IEnumerable<Tenant>>> GetTenants()
         {
             return await _context.Tenants.ToListAsync();
         }
 
         // GET: api/Tenants/5
+        // C3: Manager → any; Tenant role → only their own record.
         [HttpGet("{id}")]
         public async Task<ActionResult<Tenant>> GetTenant(int id)
         {
             var tenant = await _context.Tenants.FindAsync(id);
             if (tenant == null) return NotFound();
+
+            if (!User.IsInRole("PropertyManager"))
+            {
+                var callerUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (string.IsNullOrEmpty(callerUserId) || tenant.UserId != callerUserId)
+                    return Forbid();
+            }
+
             return tenant;
         }
 

@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using PropertyLeasingAPI.Data;
 using PropertyLeasingAPI.Models;
 using PropertyLeasingMVC.ViewModels;
 
@@ -10,15 +11,18 @@ namespace PropertyLeasingMVC.Controllers
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly RoleManager<IdentityRole> _roleManager;
+        private readonly AppDbContext _context;
 
         public AccountController(
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            RoleManager<IdentityRole> roleManager)
+            RoleManager<IdentityRole> roleManager,
+            AppDbContext context)
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _roleManager = roleManager;
+            _context = context;
         }
 
         // GET: /Account/Login
@@ -67,20 +71,59 @@ namespace PropertyLeasingMVC.Controllers
         {
             if (!ModelState.IsValid) return View(model);
 
+            // C2 — block duplicates against the Tenants table BEFORE creating an Identity user,
+            // so we never end up with an orphan ApplicationUser when Tenant insert fails.
+            if (_context.Tenants.Any(t => t.Email == model.Email))
+            {
+                ModelState.AddModelError(nameof(model.Email), "A tenant with this email already exists.");
+                return View(model);
+            }
+            if (_context.Tenants.Any(t => t.NationalId == model.NationalId))
+            {
+                ModelState.AddModelError(nameof(model.NationalId), "A tenant with this National ID already exists.");
+                return View(model);
+            }
+
             var user = new ApplicationUser
             {
                 UserName = model.Email,
                 Email = model.Email,
-                FullName = model.FullName
+                FullName = model.FullName,
+                PhoneNumber = model.Phone
             };
 
             var result = await _userManager.CreateAsync(user, model.Password);
 
             if (result.Succeeded)
             {
-                // Assign default role
                 await _userManager.AddToRoleAsync(user, "Tenant");
+
+                // C2 — every self-registered user gets a paired Tenant entity so the
+                // Lease / MaintenanceRequest flows have something to bind to.
+                var tenant = new Tenant
+                {
+                    FullName = model.FullName,
+                    Email = model.Email,
+                    Phone = model.Phone,
+                    NationalId = model.NationalId,
+                    UserId = user.Id
+                };
+
+                try
+                {
+                    _context.Tenants.Add(tenant);
+                    await _context.SaveChangesAsync();
+                }
+                catch
+                {
+                    // Roll back the Identity user so we don't leave an orphan account.
+                    await _userManager.DeleteAsync(user);
+                    ModelState.AddModelError("", "Could not complete registration. Please try again.");
+                    return View(model);
+                }
+
                 await _signInManager.SignInAsync(user, isPersistent: false);
+                TempData["SuccessMessage"] = "Welcome — your tenant account is ready.";
                 return RedirectToAction("Index", "Home");
             }
 

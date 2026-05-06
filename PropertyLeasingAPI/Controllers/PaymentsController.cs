@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -19,19 +20,32 @@ namespace PropertyLeasingAPI.Controllers
         }
 
         // GET: api/Payments
+        // C3: PropertyManager sees all; Tenant sees only payments on their own leases.
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Payment>>> GetPayments()
         {
-            // Auto-flag overdue payments
             await FlagOverduePayments();
 
-            return await _context.Payments
+            var query = _context.Payments
                 .Include(p => p.Lease)
                 .OrderByDescending(p => p.DueDate)
-                .ToListAsync();
+                .AsQueryable();
+
+            if (User.IsInRole("PropertyManager"))
+                return await query.ToListAsync();
+
+            if (User.IsInRole("Tenant"))
+            {
+                var myTenantId = await GetCallerTenantId();
+                if (myTenantId == null) return Ok(new List<Payment>());
+                return await query.Where(p => p.Lease!.TenantId == myTenantId).ToListAsync();
+            }
+
+            return Forbid();
         }
 
         // GET: api/Payments/5
+        // C3: caller must own the lease that owns the payment.
         [HttpGet("{id}")]
         public async Task<ActionResult<Payment>> GetPayment(int id)
         {
@@ -40,21 +54,40 @@ namespace PropertyLeasingAPI.Controllers
                 .FirstOrDefaultAsync(p => p.PaymentId == id);
 
             if (payment == null) return NotFound();
+
+            if (!User.IsInRole("PropertyManager"))
+            {
+                var myTenantId = await GetCallerTenantId();
+                if (myTenantId == null || payment.Lease?.TenantId != myTenantId) return Forbid();
+            }
+
             return payment;
         }
 
         // GET: api/Payments/lease/5
+        // C3: caller must own the lease (or be a PropertyManager).
         [HttpGet("lease/{leaseId}")]
         public async Task<ActionResult<IEnumerable<Payment>>> GetPaymentsByLease(int leaseId)
         {
+            if (!User.IsInRole("PropertyManager"))
+            {
+                var myTenantId = await GetCallerTenantId();
+                if (myTenantId == null) return Forbid();
+
+                var owns = await _context.Leases
+                    .AnyAsync(l => l.LeaseId == leaseId && l.TenantId == myTenantId);
+                if (!owns) return Forbid();
+            }
+
             return await _context.Payments
                 .Where(p => p.LeaseId == leaseId)
                 .OrderByDescending(p => p.DueDate)
                 .ToListAsync();
         }
 
-        // GET: api/Payments/overdue
+        // GET: api/Payments/overdue — manager-only oversight view.
         [HttpGet("overdue")]
+        [Authorize(Roles = "PropertyManager")]
         public async Task<ActionResult<IEnumerable<Payment>>> GetOverduePayments()
         {
             await FlagOverduePayments();
@@ -109,6 +142,17 @@ namespace PropertyLeasingAPI.Controllers
 
                 await _context.SaveChangesAsync();
             }
+        }
+
+        // C3: resolve the caller's TenantId via their ApplicationUser.Id claim.
+        private async Task<int?> GetCallerTenantId()
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId)) return null;
+            return await _context.Tenants
+                .Where(t => t.UserId == userId)
+                .Select(t => (int?)t.TenantId)
+                .FirstOrDefaultAsync();
         }
     }
 }

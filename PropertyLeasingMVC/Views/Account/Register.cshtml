@@ -26,6 +26,18 @@
                     </div>
 
                     <div class="mb-3">
+                        <label asp-for="Phone" class="form-label"></label>
+                        <input asp-for="Phone" class="form-control" placeholder="e.g. +97333112233" />
+                        <span asp-validation-for="Phone" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="NationalId" class="form-label"></label>
+                        <input asp-for="NationalId" class="form-control" placeholder="9-digit CPR number" />
+                        <span asp-validation-for="NationalId" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
                         <label asp-for="Password" class="form-label"></label>
                         <input asp-for="Password" class="form-control" placeholder="Min 6 characters" />
                         <span asp-validation-for="Password" class="text-danger"></span>

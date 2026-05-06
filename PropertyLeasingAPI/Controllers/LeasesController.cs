@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -20,18 +21,31 @@ namespace PropertyLeasingAPI.Controllers
         }
 
         // GET: api/Leases
+        // C3: PropertyManager sees all; Tenant sees only their own; everyone else 403.
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Lease>>> GetLeases()
         {
-            return await _context.Leases
+            var query = _context.Leases
                 .Include(l => l.Property)
                 .Include(l => l.Unit)
                 .Include(l => l.Tenant)
-                .AsNoTracking()
-                .ToListAsync();
+                .AsNoTracking();
+
+            if (User.IsInRole("PropertyManager"))
+                return await query.ToListAsync();
+
+            if (User.IsInRole("Tenant"))
+            {
+                var myTenantId = await GetCallerTenantId();
+                if (myTenantId == null) return Ok(new List<Lease>());
+                return await query.Where(l => l.TenantId == myTenantId).ToListAsync();
+            }
+
+            return Forbid();
         }
 
         // GET: api/Leases/5
+        // C3: caller must own the lease (or be a PropertyManager).
         [HttpGet("{id}")]
         public async Task<ActionResult<Lease>> GetLease(int id)
         {
@@ -43,11 +57,19 @@ namespace PropertyLeasingAPI.Controllers
                 .FirstOrDefaultAsync(l => l.LeaseId == id);
 
             if (lease == null) return NotFound();
+
+            if (!User.IsInRole("PropertyManager"))
+            {
+                var myTenantId = await GetCallerTenantId();
+                if (myTenantId == null || lease.TenantId != myTenantId) return Forbid();
+            }
+
             return lease;
         }
 
-        // GET: api/Leases/active
+        // GET: api/Leases/active — manager-only oversight view.
         [HttpGet("active")]
+        [Authorize(Roles = "PropertyManager")]
         public async Task<ActionResult<IEnumerable<Lease>>> GetActiveLeases()
         {
             return await _context.Leases
@@ -59,8 +81,9 @@ namespace PropertyLeasingAPI.Controllers
                 .ToListAsync();
         }
 
-        // GET: api/Leases/applications
+        // GET: api/Leases/applications — manager-only triage view.
         [HttpGet("applications")]
+        [Authorize(Roles = "PropertyManager")]
         public async Task<ActionResult<IEnumerable<Lease>>> GetLeaseApplications()
         {
             return await _context.Leases
@@ -236,6 +259,17 @@ namespace PropertyLeasingAPI.Controllers
                     (lease.UnitId == null && l.UnitId == null && l.PropertyId == lease.PropertyId)
                 )
             );
+        }
+
+        // C3: resolve the caller's TenantId via their ApplicationUser.Id claim.
+        private async Task<int?> GetCallerTenantId()
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId)) return null;
+            return await _context.Tenants
+                .Where(t => t.UserId == userId)
+                .Select(t => (int?)t.TenantId)
+                .FirstOrDefaultAsync();
         }
     }
 }
