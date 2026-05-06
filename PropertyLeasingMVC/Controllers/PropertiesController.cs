@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using PropertyLeasingAPI.Data;
 using PropertyLeasingAPI.Models;
+using PropertyLeasingMVC.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 
 namespace PropertyLeasingMVC.Controllers
@@ -21,8 +22,9 @@ namespace PropertyLeasingMVC.Controllers
             _context = context;
         }
 
-        // GET: Properties
-        public async Task<IActionResult> Index(string? searchString, PropertyStatus? status, PropertyType? type)
+        // GET: Properties — M9: public so prospective tenants can browse without login.
+        [AllowAnonymous]
+        public async Task<IActionResult> Index(string? searchString, PropertyStatus? status, PropertyType? type, int page = 1)
         {
             var properties = _context.Properties.Include(p => p.Units).AsQueryable();
 
@@ -42,7 +44,9 @@ namespace PropertyLeasingMVC.Controllers
             ViewBag.Status = status;
             ViewBag.Type = type;
 
-            return View(await properties.AsNoTracking().ToListAsync());
+            // P3: paginate.
+            return View(await PaginatedList<Property>.CreateAsync(
+                properties.AsNoTracking().OrderBy(p => p.Address), page, 20));
         }
 
         // GET: Properties/Details/5  — B10: eager-load Units + recent lease/maintenance
@@ -63,70 +67,63 @@ namespace PropertyLeasingMVC.Controllers
         }
 
         // GET: Properties/Create
-        [Authorize(Roles = "PropertyManager")]
-        public IActionResult Create()
-        {
-            return View();
-        }
+        [Authorize(Roles = Roles.PropertyManager)]
+        public IActionResult Create() => View(new PropertyCreateViewModel { Address = "", City = "" });
 
-        // POST: Properties/Create
-        [Authorize(Roles = "PropertyManager")]
+        // POST: Properties/Create — Q4: bind a ViewModel, not the entity.
+        [Authorize(Roles = Roles.PropertyManager)]
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("PropertyId,Address,City,PropertyType,Bedrooms,MonthlyRent,Status,Description")] Property property)
+        public async Task<IActionResult> Create(PropertyCreateViewModel vm)
         {
             if (ModelState.IsValid)
             {
-                _context.Add(property);
+                _context.Add(vm.ToEntity());
                 await _context.SaveChangesAsync();
                 TempData["SuccessMessage"] = "Property created successfully!";
                 return RedirectToAction(nameof(Index));
             }
-            return View(property);
+            return View(vm);
         }
 
         // GET: Properties/Edit/5
-        [Authorize(Roles = "PropertyManager")]
+        [Authorize(Roles = Roles.PropertyManager)]
         public async Task<IActionResult> Edit(int? id)
         {
             if (id == null) return NotFound();
-
             var property = await _context.Properties.FindAsync(id);
             if (property == null) return NotFound();
-
-            return View(property);
+            return View(PropertyCreateViewModel.FromEntity(property));
         }
 
-        // POST: Properties/Edit/5
-        [Authorize(Roles = "PropertyManager")]
+        // POST: Properties/Edit/5 — Q4: ViewModel-bound.
+        [Authorize(Roles = Roles.PropertyManager)]
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("PropertyId,Address,City,PropertyType,Bedrooms,MonthlyRent,Status,Description")] Property property)
+        public async Task<IActionResult> Edit(int id, PropertyCreateViewModel vm)
         {
-            if (id != property.PropertyId) return NotFound();
+            if (id != vm.PropertyId) return NotFound();
 
             if (ModelState.IsValid)
             {
                 try
                 {
-                    _context.Update(property);
+                    _context.Update(vm.ToEntity());
                     await _context.SaveChangesAsync();
                     TempData["SuccessMessage"] = "Property updated successfully!";
                 }
                 catch (DbUpdateConcurrencyException)
                 {
-                    if (!PropertyExists(property.PropertyId))
-                        return NotFound();
-                    else
-                        throw;
+                    if (!PropertyExists(vm.PropertyId)) return NotFound();
+                    throw;
                 }
                 return RedirectToAction(nameof(Index));
             }
-            return View(property);
+            return View(vm);
         }
 
         // GET: Properties/Delete/5
-        [Authorize(Roles = "PropertyManager")]
+        [Authorize(Roles = Roles.PropertyManager)]
         public async Task<IActionResult> Delete(int? id)
         {
             if (id == null) return NotFound();
@@ -140,7 +137,7 @@ namespace PropertyLeasingMVC.Controllers
         }
 
         // POST: Properties/Delete/5
-        [Authorize(Roles = "PropertyManager")]
+        [Authorize(Roles = Roles.PropertyManager)]
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)

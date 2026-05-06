@@ -67,7 +67,7 @@ namespace PropertyLeasingAPI.Controllers
 
         // POST: api/Units
         [HttpPost]
-        [Authorize(Roles = "PropertyManager")]
+        [Authorize(Roles = Roles.PropertyManager)]
         public async Task<ActionResult<Unit>> PostUnit(Unit unit)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
@@ -104,7 +104,7 @@ namespace PropertyLeasingAPI.Controllers
 
         // PUT: api/Units/5
         [HttpPut("{id}")]
-        [Authorize(Roles = "PropertyManager")]
+        [Authorize(Roles = Roles.PropertyManager)]
         public async Task<IActionResult> PutUnit(int id, Unit unit)
         {
             if (id != unit.UnitId) return BadRequest();
@@ -140,7 +140,7 @@ namespace PropertyLeasingAPI.Controllers
 
         // DELETE: api/Units/5
         [HttpDelete("{id}")]
-        [Authorize(Roles = "PropertyManager")]
+        [Authorize(Roles = Roles.PropertyManager)]
         public async Task<IActionResult> DeleteUnit(int id)
         {
             var unit = await _context.Units.FindAsync(id);

@@ -8,6 +8,7 @@ using PropertyLeasingAPI.Data;
 using PropertyLeasingAPI.Models;
 using PropertyLeasingAPI.Services;
 using PropertyLeasingMVC.Hubs;
+using PropertyLeasingMVC.ViewModels;
 
 namespace PropertyLeasingMVC.Controllers
 {
@@ -32,7 +33,7 @@ namespace PropertyLeasingMVC.Controllers
         }
 
         // GET: MaintenanceRequests
-        public async Task<IActionResult> Index(string? searchString, MaintenanceStatus? status, MaintenanceCategory? category, MaintenancePriority? priority)
+        public async Task<IActionResult> Index(string? searchString, MaintenanceStatus? status, MaintenanceCategory? category, MaintenancePriority? priority, int page = 1)
         {
             var requests = _context.MaintenanceRequests
                 .Include(m => m.Property)
@@ -61,7 +62,8 @@ namespace PropertyLeasingMVC.Controllers
             ViewBag.Category = category;
             ViewBag.Priority = priority;
 
-            return View(await requests.OrderByDescending(m => m.DateSubmitted).ToListAsync());
+            return View(await PaginatedList<MaintenanceRequest>.CreateAsync(
+                requests.OrderByDescending(m => m.DateSubmitted), page, 20));
         }
 
         // GET: MaintenanceRequests/Details/5
@@ -78,9 +80,16 @@ namespace PropertyLeasingMVC.Controllers
 
             if (maintenanceRequest == null) return NotFound();
 
-            // Provide staff list for assignment dropdown
-            var staffUsers = await _userManager.GetUsersInRoleAsync("MaintenanceStaff");
-            ViewBag.StaffList = new SelectList(staffUsers, "Id", "FullName", maintenanceRequest.AssignedStaffId);
+            // M1 + M10: ranked staff list — skill-matched first, then other available staff,
+            // unavailable staff hidden by default (manager can still see them in Edit if needed).
+            var allStaff = await _userManager.GetUsersInRoleAsync(Roles.MaintenanceStaff);
+            var category = maintenanceRequest.Category.ToString();
+            var available = allStaff.Where(u => u.IsAvailable).ToList();
+            var skilled = available.Where(u => !string.IsNullOrEmpty(u.Skills)
+                                            && u.Skills.Split(',', StringSplitOptions.TrimEntries)
+                                                       .Contains(category, StringComparer.OrdinalIgnoreCase)).ToList();
+            var ranked = skilled.Concat(available.Except(skilled)).ToList();
+            ViewBag.StaffList = new SelectList(ranked, "Id", "FullName", maintenanceRequest.AssignedStaffId);
 
             return View(maintenanceRequest);
         }
@@ -88,7 +97,7 @@ namespace PropertyLeasingMVC.Controllers
         // POST: MaintenanceRequests/Assign/5 - Property Manager assigns staff
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Roles = "PropertyManager")]
+        [Authorize(Roles = Roles.PropertyManager)]
         public async Task<IActionResult> Assign(int id, string assignedStaffId)
         {
             var request = await _context.MaintenanceRequests
@@ -141,7 +150,7 @@ namespace PropertyLeasingMVC.Controllers
         // POST: MaintenanceRequests/UpdateStatus/5 - Update status through lifecycle
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Roles = "PropertyManager,MaintenanceStaff")]
+        [Authorize(Roles = Roles.PropertyManager + "," + Roles.MaintenanceStaff)]
         public async Task<IActionResult> UpdateStatus(int id, MaintenanceStatus newStatus, string? staffNotes)
         {
             var request = await _context.MaintenanceRequests
@@ -203,7 +212,7 @@ namespace PropertyLeasingMVC.Controllers
         }
 
         // GET: MaintenanceRequests/Create
-        [Authorize(Roles = "PropertyManager,Tenant")]
+        [Authorize(Roles = Roles.PropertyManager + "," + Roles.Tenant)]
         public IActionResult Create()
         {
             ViewData["PropertyId"] = new SelectList(_context.Properties, "PropertyId", "Address");
@@ -212,7 +221,7 @@ namespace PropertyLeasingMVC.Controllers
         }
 
         // POST: MaintenanceRequests/Create
-        [Authorize(Roles = "PropertyManager,Tenant")]
+        [Authorize(Roles = Roles.PropertyManager + "," + Roles.Tenant)]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("RequestId,PropertyId,UnitId,TenantId,Title,Description,Category,Priority")] MaintenanceRequest maintenanceRequest)
@@ -243,7 +252,7 @@ namespace PropertyLeasingMVC.Controllers
         }
 
         // GET: MaintenanceRequests/Edit/5
-        [Authorize(Roles = "PropertyManager,MaintenanceStaff")]
+        [Authorize(Roles = Roles.PropertyManager + "," + Roles.MaintenanceStaff)]
         public async Task<IActionResult> Edit(int? id)
         {
             if (id == null) return NotFound();
@@ -254,14 +263,14 @@ namespace PropertyLeasingMVC.Controllers
             ViewData["PropertyId"] = new SelectList(_context.Properties, "PropertyId", "Address", maintenanceRequest.PropertyId);
             ViewData["TenantId"] = new SelectList(_context.Tenants, "TenantId", "FullName", maintenanceRequest.TenantId);
 
-            var staffUsers = await _userManager.GetUsersInRoleAsync("MaintenanceStaff");
+            var staffUsers = await _userManager.GetUsersInRoleAsync(Roles.MaintenanceStaff);
             ViewData["AssignedStaffId"] = new SelectList(staffUsers, "Id", "FullName", maintenanceRequest.AssignedStaffId);
 
             return View(maintenanceRequest);
         }
 
         // POST: MaintenanceRequests/Edit/5
-        [Authorize(Roles = "PropertyManager,MaintenanceStaff")]
+        [Authorize(Roles = Roles.PropertyManager + "," + Roles.MaintenanceStaff)]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, [Bind("RequestId,PropertyId,UnitId,TenantId,Title,Description,Category,Priority,Status,AssignedStaffId,StaffNotes,DateSubmitted,DateAssigned,DateResolved")] MaintenanceRequest maintenanceRequest)
@@ -270,7 +279,7 @@ namespace PropertyLeasingMVC.Controllers
 
             // L3: MaintenanceStaff are allowed to edit only Status + StaffNotes.
             // Reload everything else from DB so an over-posted form can't reassign tickets.
-            if (User.IsInRole("MaintenanceStaff") && !User.IsInRole("PropertyManager"))
+            if (User.IsInRole(Roles.MaintenanceStaff) && !User.IsInRole(Roles.PropertyManager))
             {
                 var existing = await _context.MaintenanceRequests
                     .AsNoTracking()
@@ -329,14 +338,14 @@ namespace PropertyLeasingMVC.Controllers
             ViewData["PropertyId"] = new SelectList(_context.Properties, "PropertyId", "Address", maintenanceRequest.PropertyId);
             ViewData["TenantId"] = new SelectList(_context.Tenants, "TenantId", "FullName", maintenanceRequest.TenantId);
 
-            var staffList = await _userManager.GetUsersInRoleAsync("MaintenanceStaff");
+            var staffList = await _userManager.GetUsersInRoleAsync(Roles.MaintenanceStaff);
             ViewData["AssignedStaffId"] = new SelectList(staffList, "Id", "FullName", maintenanceRequest.AssignedStaffId);
 
             return View(maintenanceRequest);
         }
 
         // GET: MaintenanceRequests/Delete/5
-        [Authorize(Roles = "PropertyManager")]
+        [Authorize(Roles = Roles.PropertyManager)]
         public async Task<IActionResult> Delete(int? id)
         {
             if (id == null) return NotFound();
@@ -354,7 +363,7 @@ namespace PropertyLeasingMVC.Controllers
         }
 
         // POST: MaintenanceRequests/Delete/5
-        [Authorize(Roles = "PropertyManager")]
+        [Authorize(Roles = Roles.PropertyManager)]
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)

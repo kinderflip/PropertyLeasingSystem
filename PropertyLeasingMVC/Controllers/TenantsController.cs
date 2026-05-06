@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using PropertyLeasingAPI.Data;
 using PropertyLeasingAPI.Models;
 using PropertyLeasingAPI.Services;
+using PropertyLeasingMVC.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 namespace PropertyLeasingMVC.Controllers
 {
@@ -22,9 +23,10 @@ namespace PropertyLeasingMVC.Controllers
         }
 
         // GET: Tenants
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(int page = 1)
         {
-            return View(await _context.Tenants.ToListAsync());
+            return View(await PaginatedList<Tenant>.CreateAsync(
+                _context.Tenants.OrderBy(t => t.FullName), page, 20));
         }
 
         // GET: Tenants/Details/5
@@ -46,92 +48,64 @@ namespace PropertyLeasingMVC.Controllers
         }
 
         // GET: Tenants/Create
-        [Authorize(Roles = "PropertyManager")]
+        [Authorize(Roles = Roles.PropertyManager)]
         public IActionResult Create()
-        {
-            return View();
-        }
+            => View(new TenantCreateViewModel { FullName = "", Email = "", Phone = "", NationalId = "" });
 
-        // POST: Tenants/Create
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
+        // POST: Tenants/Create — Q4: VM-bound; L13: phone normalised inside ToEntity.
         [HttpPost]
-        [Authorize(Roles = "PropertyManager")]
+        [Authorize(Roles = Roles.PropertyManager)]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("TenantId,FullName,Email,Phone,NationalId,UserId")] Tenant tenant)
+        public async Task<IActionResult> Create(TenantCreateViewModel vm)
         {
-            // L13: store the canonical (digits-only) form so Track can find the row reliably.
-            tenant.Phone = PhoneHelper.Normalize(tenant.Phone);
-
             if (ModelState.IsValid)
             {
-                _context.Add(tenant);
+                _context.Add(vm.ToEntity());
                 await _context.SaveChangesAsync();
                 TempData["SuccessMessage"] = "Tenant created successfully!";
                 return RedirectToAction(nameof(Index));
             }
-            return View(tenant);
+            return View(vm);
         }
 
         // GET: Tenants/Edit/5
-        [Authorize(Roles = "PropertyManager")]
+        [Authorize(Roles = Roles.PropertyManager)]
         public async Task<IActionResult> Edit(int? id)
         {
-            if (id == null)
-            {
-                return NotFound();
-            }
-
+            if (id == null) return NotFound();
             var tenant = await _context.Tenants.FindAsync(id);
-            if (tenant == null)
-            {
-                return NotFound();
-            }
-            return View(tenant);
+            if (tenant == null) return NotFound();
+            return View(TenantCreateViewModel.FromEntity(tenant));
         }
 
-        // POST: Tenants/Edit/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
+        // POST: Tenants/Edit/5 — Q4: VM-bound.
         [HttpPost]
-        [Authorize(Roles = "PropertyManager")]
+        [Authorize(Roles = Roles.PropertyManager)]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("TenantId,FullName,Email,Phone,NationalId,UserId")] Tenant tenant)
+        public async Task<IActionResult> Edit(int id, TenantCreateViewModel vm)
         {
-            if (id != tenant.TenantId)
-            {
-                return NotFound();
-            }
-
-            // L13: keep stored phones in canonical form on every update.
-            tenant.Phone = PhoneHelper.Normalize(tenant.Phone);
+            if (id != vm.TenantId) return NotFound();
 
             if (ModelState.IsValid)
             {
                 try
                 {
-                    _context.Update(tenant);
+                    _context.Update(vm.ToEntity());
                     await _context.SaveChangesAsync();
                     TempData["SuccessMessage"] = "Tenant updated successfully!";
                 }
                 catch (DbUpdateConcurrencyException)
                 {
-                    if (!TenantExists(tenant.TenantId))
-                    {
-                        return NotFound();
-                    }
-                    else
-                    {
-                        throw;
-                    }
+                    if (!TenantExists(vm.TenantId)) return NotFound();
+                    throw;
                 }
                 return RedirectToAction(nameof(Index));
             }
-            return View(tenant);
+            return View(vm);
         }
 
         // GET: Tenants/Delete/5
-        [Authorize(Roles = "PropertyManager")]
+        [Authorize(Roles = Roles.PropertyManager)]
         public async Task<IActionResult> Delete(int? id)
         {
             if (id == null)
@@ -151,7 +125,7 @@ namespace PropertyLeasingMVC.Controllers
 
         // POST: Tenants/Delete/5
         [HttpPost, ActionName("Delete")]
-        [Authorize(Roles = "PropertyManager")]
+        [Authorize(Roles = Roles.PropertyManager)]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {

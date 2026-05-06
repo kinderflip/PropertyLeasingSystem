@@ -1,4 +1,4 @@
-@model IEnumerable<PropertyLeasingAPI.Models.MaintenanceRequest>
+@model PropertyLeasingMVC.ViewModels.PaginatedList<PropertyLeasingAPI.Models.MaintenanceRequest>
 @{
     ViewData["Title"] = "Maintenance Requests";
 }
@@ -142,6 +142,8 @@
         }
     </div>
 </div>
+
+<partial name="_Pagination" model="Model" />
 
 @section Scripts {
     <script src="~/lib/microsoft/signalr/dist/browser/signalr.min.js"></script>

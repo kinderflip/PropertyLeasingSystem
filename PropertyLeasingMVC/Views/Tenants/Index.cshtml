@@ -1,59 +1,59 @@
-﻿@model IEnumerable<PropertyLeasingAPI.Models.Tenant>
+@model PropertyLeasingMVC.ViewModels.PaginatedList<PropertyLeasingAPI.Models.Tenant>
 
 @{
-    ViewData["Title"] = "Index";
+    ViewData["Title"] = "Tenants";
 }
 
-<h1>Index</h1>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>👥 Tenants</h2>
+    <a asp-action="Create" class="btn btn-primary">+ Add Tenant</a>
+</div>
 
-<p>
-    <a asp-action="Create">Create New</a>
-</p>
-<table class="table">
-    <thead>
-        <tr>
-            <th>
-                @Html.DisplayNameFor(model => model.FullName)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Email)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Phone)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.NationalId)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.UserId)
-            </th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-@foreach (var item in Model) {
-        <tr>
-            <td>
-                @Html.DisplayFor(modelItem => item.FullName)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Email)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Phone)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.NationalId)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.UserId)
-            </td>
-            <td>
-                <a asp-action="Edit" asp-route-id="@item.TenantId">Edit</a> |
-                <a asp-action="Details" asp-route-id="@item.TenantId">Details</a> |
-                <a asp-action="Delete" asp-route-id="@item.TenantId">Delete</a>
-            </td>
-        </tr>
-}
-    </tbody>
-</table>
+<div class="card shadow-sm">
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead class="table-dark">
+                <tr>
+                    <th>Full Name</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>National ID</th>
+                    <th>Linked User</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model)
+                {
+                    <tr>
+                        <td>@item.FullName</td>
+                        <td>@item.Email</td>
+                        <td>@item.Phone</td>
+                        <td>@item.NationalId</td>
+                        <td>
+                            @if (!string.IsNullOrEmpty(item.UserId))
+                            {
+                                <span class="badge bg-success">Linked</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">No login</span>
+                            }
+                        </td>
+                        <td>
+                            <a asp-action="Details" asp-route-id="@item.TenantId" class="btn btn-sm btn-outline-primary">Details</a>
+                            <a asp-action="Edit" asp-route-id="@item.TenantId" class="btn btn-sm btn-outline-warning">Edit</a>
+                            <a asp-action="Delete" asp-route-id="@item.TenantId" class="btn btn-sm btn-outline-danger">Delete</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        @if (!Model.Any())
+        {
+            <p class="text-muted text-center py-4">No tenants found.</p>
+        }
+    </div>
+</div>
+
+<partial name="_Pagination" model="Model" />

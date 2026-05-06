@@ -50,7 +50,7 @@ namespace PropertyLeasingReports.Controllers
                     if (result != null && !string.IsNullOrEmpty(result.Token))
                     {
                         // C7: the Reports portal is a senior-business-role tool only.
-                        if (!result.Roles.Contains("PropertyManager"))
+                        if (!result.Roles.Contains(Roles.PropertyManager))
                         {
                             ViewBag.Error = "This portal is restricted to Property Managers.";
                             return View();

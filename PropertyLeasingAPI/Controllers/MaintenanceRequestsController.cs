@@ -33,16 +33,16 @@ namespace PropertyLeasingAPI.Controllers
                 .AsNoTracking()
                 .AsQueryable();
 
-            if (User.IsInRole("PropertyManager"))
+            if (User.IsInRole(Roles.PropertyManager))
                 return await query.ToListAsync();
 
-            if (User.IsInRole("MaintenanceStaff"))
+            if (User.IsInRole(Roles.MaintenanceStaff))
             {
                 var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
                 return await query.Where(m => m.AssignedStaffId == userId).ToListAsync();
             }
 
-            if (User.IsInRole("Tenant"))
+            if (User.IsInRole(Roles.Tenant))
             {
                 var myTenantId = await GetCallerTenantId();
                 if (myTenantId == null) return Ok(new List<MaintenanceRequest>());
@@ -68,7 +68,7 @@ namespace PropertyLeasingAPI.Controllers
 
             if (request == null) return NotFound();
 
-            if (!User.IsInRole("PropertyManager"))
+            if (!User.IsInRole(Roles.PropertyManager))
             {
                 var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
                 var myTenantId = await GetCallerTenantId();
@@ -128,7 +128,7 @@ namespace PropertyLeasingAPI.Controllers
 
         // GET: api/MaintenanceRequests/pending — manager + staff triage view.
         [HttpGet("pending")]
-        [Authorize(Roles = "PropertyManager,MaintenanceStaff")]
+        [Authorize(Roles = Roles.PropertyManager + "," + Roles.MaintenanceStaff)]
         public async Task<ActionResult<IEnumerable<MaintenanceRequest>>> GetPendingRequests()
         {
             return await _context.MaintenanceRequests
@@ -143,7 +143,7 @@ namespace PropertyLeasingAPI.Controllers
 
         // POST: api/MaintenanceRequests
         [HttpPost]
-        [Authorize(Roles = "PropertyManager,Tenant")]
+        [Authorize(Roles = Roles.PropertyManager + "," + Roles.Tenant)]
         public async Task<ActionResult<MaintenanceRequest>> PostMaintenanceRequest(MaintenanceRequest request)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
@@ -165,7 +165,7 @@ namespace PropertyLeasingAPI.Controllers
 
         // PUT: api/MaintenanceRequests/5
         [HttpPut("{id}")]
-        [Authorize(Roles = "PropertyManager,MaintenanceStaff")]
+        [Authorize(Roles = Roles.PropertyManager + "," + Roles.MaintenanceStaff)]
         public async Task<IActionResult> PutMaintenanceRequest(int id, MaintenanceRequest request)
         {
             if (id != request.RequestId) return BadRequest();
@@ -204,7 +204,7 @@ namespace PropertyLeasingAPI.Controllers
 
         // DELETE: api/MaintenanceRequests/5
         [HttpDelete("{id}")]
-        [Authorize(Roles = "PropertyManager")]
+        [Authorize(Roles = Roles.PropertyManager)]
         public async Task<IActionResult> DeleteMaintenanceRequest(int id)
         {
             var request = await _context.MaintenanceRequests.FindAsync(id);

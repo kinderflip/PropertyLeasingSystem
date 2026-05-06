@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.SignalR;
@@ -7,6 +8,7 @@ using PropertyLeasingAPI.Models;
 using PropertyLeasingAPI.Services;
 using Microsoft.AspNetCore.Authorization;
 using PropertyLeasingMVC.Hubs;
+using PropertyLeasingMVC.ViewModels;
 
 namespace PropertyLeasingMVC.Controllers
 {
@@ -22,8 +24,31 @@ namespace PropertyLeasingMVC.Controllers
             _notificationHub = notificationHub;
         }
 
+        // M5: tenant-scoped view of own leases. Surfaced in the navbar for Tenant role.
+        [Authorize(Roles = Roles.Tenant + "," + Roles.PropertyManager)]
+        public async Task<IActionResult> MyLeases(int page = 1)
+        {
+            var userId = User.FindFirstValue(System.Security.Claims.ClaimTypes.NameIdentifier);
+            var emptyPage = new PaginatedList<Lease>(new List<Lease>(), 0, 1, 20);
+
+            if (string.IsNullOrEmpty(userId)) return View("Index", emptyPage);
+
+            var tenant = await _context.Tenants.FirstOrDefaultAsync(t => t.UserId == userId);
+            if (tenant == null) return View("Index", emptyPage);
+
+            var query = _context.Leases
+                .Include(l => l.Property)
+                .Include(l => l.Unit)
+                .Include(l => l.Tenant)
+                .Where(l => l.TenantId == tenant.TenantId)
+                .OrderByDescending(l => l.ApplicationDate);
+
+            ViewBag.MyView = true;
+            return View("Index", await PaginatedList<Lease>.CreateAsync(query, page, 20));
+        }
+
         // GET: Leases
-        public async Task<IActionResult> Index(string? searchString, LeaseStatus? status)
+        public async Task<IActionResult> Index(string? searchString, LeaseStatus? status, int page = 1)
         {
             var leases = _context.Leases
                 .Include(l => l.Property)
@@ -43,7 +68,8 @@ namespace PropertyLeasingMVC.Controllers
             ViewBag.SearchString = searchString;
             ViewBag.Status = status;
 
-            return View(await leases.OrderByDescending(l => l.ApplicationDate).ToListAsync());
+            return View(await PaginatedList<Lease>.CreateAsync(
+                leases.OrderByDescending(l => l.ApplicationDate), page, 20));
         }
 
         // GET: Leases/Details/5
@@ -63,7 +89,7 @@ namespace PropertyLeasingMVC.Controllers
         }
 
         // GET: Leases/Apply - Tenant submits a lease application
-        [Authorize(Roles = "PropertyManager,Tenant")]
+        [Authorize(Roles = Roles.PropertyManager + "," + Roles.Tenant)]
         public IActionResult Create()
         {
             PopulateDropdowns(null, null);
@@ -73,7 +99,7 @@ namespace PropertyLeasingMVC.Controllers
         // POST: Leases/Create - Submit lease application
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Roles = "PropertyManager,Tenant")]
+        [Authorize(Roles = Roles.PropertyManager + "," + Roles.Tenant)]
         public async Task<IActionResult> Create([Bind("LeaseId,PropertyId,UnitId,TenantId,StartDate,EndDate,MonthlyRent,ApplicationNotes")] Lease lease)
         {
             // L1: auto-fill MonthlyRent from the chosen Unit/Property BEFORE the
@@ -126,7 +152,7 @@ namespace PropertyLeasingMVC.Controllers
         // POST: Leases/UpdateStatus/5 - Property Manager moves lease through lifecycle
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Roles = "PropertyManager")]
+        [Authorize(Roles = Roles.PropertyManager)]
         public async Task<IActionResult> UpdateStatus(int id, LeaseStatus newStatus, string? screeningNotes, DateTime? newEndDate)
         {
             var lease = await _context.Leases
@@ -177,6 +203,28 @@ namespace PropertyLeasingMVC.Controllers
                     lease.Unit.Status = UnitStatus.Leased;
                 else if (lease.Property != null)
                     lease.Property.Status = PropertyStatus.Leased;
+
+                // M2: auto-generate the monthly rent schedule for the lease term, but
+                // only if no payments exist yet (avoids duplicates if Active is re-entered).
+                var alreadyHasPayments = await _context.Payments.AnyAsync(p => p.LeaseId == lease.LeaseId);
+                if (!alreadyHasPayments)
+                {
+                    var schedule = new List<Payment>();
+                    for (var due = lease.StartDate.Date;
+                         due <= lease.EndDate.Date;
+                         due = due.AddMonths(1))
+                    {
+                        schedule.Add(new Payment
+                        {
+                            LeaseId     = lease.LeaseId,
+                            Amount      = lease.MonthlyRent,
+                            DueDate     = due,
+                            PaymentType = PaymentType.Rent,
+                            Status      = PaymentStatus.Pending
+                        });
+                    }
+                    if (schedule.Count > 0) _context.Payments.AddRange(schedule);
+                }
             }
             else if (newStatus == LeaseStatus.Terminated || newStatus == LeaseStatus.Rejected || newStatus == LeaseStatus.Expired)
             {
@@ -207,7 +255,7 @@ namespace PropertyLeasingMVC.Controllers
         }
 
         // GET: Leases/Edit/5
-        [Authorize(Roles = "PropertyManager")]
+        [Authorize(Roles = Roles.PropertyManager)]
         public async Task<IActionResult> Edit(int? id)
         {
             if (id == null) return NotFound();
@@ -222,7 +270,7 @@ namespace PropertyLeasingMVC.Controllers
         // POST: Leases/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Roles = "PropertyManager")]
+        [Authorize(Roles = Roles.PropertyManager)]
         public async Task<IActionResult> Edit(int id, [Bind("LeaseId,PropertyId,UnitId,TenantId,StartDate,EndDate,MonthlyRent,ApplicationDate,ApplicationNotes,ScreeningNotes,ApprovalDate")] Lease lease)
         {
             if (id != lease.LeaseId) return NotFound();
@@ -269,7 +317,7 @@ namespace PropertyLeasingMVC.Controllers
         }
 
         // GET: Leases/Delete/5
-        [Authorize(Roles = "PropertyManager")]
+        [Authorize(Roles = Roles.PropertyManager)]
         public async Task<IActionResult> Delete(int? id)
         {
             if (id == null) return NotFound();
@@ -288,7 +336,7 @@ namespace PropertyLeasingMVC.Controllers
         // POST: Leases/Delete/5
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
-        [Authorize(Roles = "PropertyManager")]
+        [Authorize(Roles = Roles.PropertyManager)]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
             var lease = await _context.Leases

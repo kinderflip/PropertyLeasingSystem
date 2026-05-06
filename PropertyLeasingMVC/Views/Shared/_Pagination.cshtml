@@ -1,0 +1,43 @@
+@*
+    P3: shared pagination partial.
+    Pass any PaginatedList<T> via the model.  Existing ViewBag query-string keys
+    (SearchString, Status, Type, Category, Priority, etc.) are forwarded so
+    filters survive paging.
+*@
+@model dynamic
+@{
+    int pageIndex  = (int)Model.PageIndex;
+    int totalPages = (int)Model.TotalPages;
+    int totalCount = (int)Model.TotalCount;
+    bool hasPrev   = (bool)Model.HasPrevious;
+    bool hasNext   = (bool)Model.HasNext;
+
+    // Carry forward filter state so paging links keep the user's query.
+    var routeValues = new Dictionary<string, string?>();
+    foreach (var key in new[] { "searchString", "status", "type", "category", "priority", "city", "maxRent", "propertyId" })
+    {
+        var v = ViewContext.HttpContext.Request.Query[key].ToString();
+        if (!string.IsNullOrEmpty(v)) routeValues[key] = v;
+    }
+}
+
+@if (totalPages > 1)
+{
+    <nav class="mt-3">
+        <ul class="pagination justify-content-center mb-0">
+            <li class="page-item @(hasPrev ? "" : "disabled")">
+                <a class="page-link" href="?@string.Join("&", routeValues.Select(kv => kv.Key + "=" + System.Net.WebUtility.UrlEncode(kv.Value)))&page=@(pageIndex - 1)">Previous</a>
+            </li>
+            @for (int i = 1; i <= totalPages; i++)
+            {
+                <li class="page-item @(i == pageIndex ? "active" : "")">
+                    <a class="page-link" href="?@string.Join("&", routeValues.Select(kv => kv.Key + "=" + System.Net.WebUtility.UrlEncode(kv.Value)))&page=@i">@i</a>
+                </li>
+            }
+            <li class="page-item @(hasNext ? "" : "disabled")">
+                <a class="page-link" href="?@string.Join("&", routeValues.Select(kv => kv.Key + "=" + System.Net.WebUtility.UrlEncode(kv.Value)))&page=@(pageIndex + 1)">Next</a>
+            </li>
+        </ul>
+    </nav>
+    <div class="text-center text-muted small mt-2">Page @pageIndex of @totalPages — @totalCount records</div>
+}

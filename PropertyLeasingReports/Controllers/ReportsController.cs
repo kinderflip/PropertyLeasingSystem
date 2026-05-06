@@ -6,7 +6,7 @@ using PropertyLeasingReports.Models;
 
 namespace PropertyLeasingReports.Controllers
 {
-    [Authorize(Roles = "PropertyManager")]
+    [Authorize(Roles = Roles.PropertyManager)]
     public class ReportsController : Controller
     {
         private readonly IHttpClientFactory _httpClientFactory;

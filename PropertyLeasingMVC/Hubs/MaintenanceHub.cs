@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 
 namespace PropertyLeasingMVC.Hubs
@@ -5,6 +6,8 @@ namespace PropertyLeasingMVC.Hubs
     // Plan B13: use groups so status updates aren't broadcast to everyone.
     // "live-board"    → dashboards / index pages that want every update.
     // "request-{id}"  → pages for a specific maintenance ticket.
+    // S7: [Authorize] so anonymous clients can't subscribe to live updates.
+    [Authorize]
     public class MaintenanceHub : Hub
     {
         public Task JoinLiveBoard() => Groups.AddToGroupAsync(Context.ConnectionId, "live-board");

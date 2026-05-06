@@ -22,7 +22,7 @@ namespace PropertyLeasingAPI.Controllers
         // GET: api/Tenants — manager-only directory.
         // C3: tenants directory was readable by every authenticated role; lock to PropertyManager.
         [HttpGet]
-        [Authorize(Roles = "PropertyManager")]
+        [Authorize(Roles = Roles.PropertyManager)]
         public async Task<ActionResult<IEnumerable<Tenant>>> GetTenants()
         {
             return await _context.Tenants.ToListAsync();
@@ -36,7 +36,7 @@ namespace PropertyLeasingAPI.Controllers
             var tenant = await _context.Tenants.FindAsync(id);
             if (tenant == null) return NotFound();
 
-            if (!User.IsInRole("PropertyManager"))
+            if (!User.IsInRole(Roles.PropertyManager))
             {
                 var callerUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
                 if (string.IsNullOrEmpty(callerUserId) || tenant.UserId != callerUserId)
@@ -48,7 +48,7 @@ namespace PropertyLeasingAPI.Controllers
 
         // POST: api/Tenants
         [HttpPost]
-        [Authorize(Roles = "PropertyManager")]
+        [Authorize(Roles = Roles.PropertyManager)]
         public async Task<ActionResult<Tenant>> PostTenant(Tenant tenant)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
@@ -61,7 +61,7 @@ namespace PropertyLeasingAPI.Controllers
 
         // PUT: api/Tenants/5
         [HttpPut("{id}")]
-        [Authorize(Roles = "PropertyManager")]
+        [Authorize(Roles = Roles.PropertyManager)]
         public async Task<IActionResult> PutTenant(int id, Tenant tenant)
         {
             if (id != tenant.TenantId) return BadRequest();
@@ -85,7 +85,7 @@ namespace PropertyLeasingAPI.Controllers
 
         // DELETE: api/Tenants/5
         [HttpDelete("{id}")]
-        [Authorize(Roles = "PropertyManager")]
+        [Authorize(Roles = Roles.PropertyManager)]
         public async Task<IActionResult> DeleteTenant(int id)
         {
             var tenant = await _context.Tenants.FindAsync(id);

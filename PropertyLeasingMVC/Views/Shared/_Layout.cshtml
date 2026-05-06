@@ -42,21 +42,38 @@
                             <li class="nav-item">
                                 <a class="nav-link" asp-controller="Properties" asp-action="Index">Properties</a>
                             </li>
-                            <li class="nav-item">
-                                <a class="nav-link" asp-controller="Units" asp-action="Index">Units</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" asp-controller="Tenants" asp-action="Index">Tenants</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" asp-controller="Leases" asp-action="Index">Leases</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" asp-controller="MaintenanceRequests" asp-action="Index">Maintenance</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" asp-controller="Payments" asp-action="Index">Payments</a>
-                            </li>
+
+                            @* M5: Tenant role only sees their own data via dedicated actions. *@
+                            @if (User.IsInRole("Tenant") && !User.IsInRole("PropertyManager"))
+                            {
+                                <li class="nav-item">
+                                    <a class="nav-link" asp-controller="Leases" asp-action="MyLeases">My Leases</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" asp-controller="Payments" asp-action="MyPayments">My Payments</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" asp-controller="MaintenanceRequests" asp-action="Index">My Requests</a>
+                                </li>
+                            }
+                            else
+                            {
+                                <li class="nav-item">
+                                    <a class="nav-link" asp-controller="Units" asp-action="Index">Units</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" asp-controller="Tenants" asp-action="Index">Tenants</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" asp-controller="Leases" asp-action="Index">Leases</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" asp-controller="MaintenanceRequests" asp-action="Index">Maintenance</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" asp-controller="Payments" asp-action="Index">Payments</a>
+                                </li>
+                            }
                             <li class="nav-item">
                                 <a class="nav-link position-relative" asp-controller="Notifications" asp-action="Index">
                                     Notifications

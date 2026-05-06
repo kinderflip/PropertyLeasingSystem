@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
 namespace PropertyLeasingAPI.Models
 {
@@ -24,8 +24,9 @@ namespace PropertyLeasingAPI.Models
         [Display(Name = "National ID")]
         public required string NationalId { get; set; }
 
-        // Link to Identity user (optional - for login)
+        // D1: linked Identity user — FK is configured in AppDbContext.OnModelCreating.
         public string? UserId { get; set; }
+        public ApplicationUser? User { get; set; }
 
         // Navigation properties
         public ICollection<Lease> Leases { get; set; } = new List<Lease>();

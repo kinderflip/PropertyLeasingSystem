@@ -100,7 +100,7 @@ namespace PropertyLeasingMVC.Controllers
 
             if (result.Succeeded)
             {
-                await _userManager.AddToRoleAsync(user, "Tenant");
+                await _userManager.AddToRoleAsync(user, Roles.Tenant);
 
                 // C2 — every self-registered user gets a paired Tenant entity so the
                 // Lease / MaintenanceRequest flows have something to bind to.

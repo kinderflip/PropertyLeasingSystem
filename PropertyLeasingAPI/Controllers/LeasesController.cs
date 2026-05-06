@@ -31,10 +31,10 @@ namespace PropertyLeasingAPI.Controllers
                 .Include(l => l.Tenant)
                 .AsNoTracking();
 
-            if (User.IsInRole("PropertyManager"))
+            if (User.IsInRole(Roles.PropertyManager))
                 return await query.ToListAsync();
 
-            if (User.IsInRole("Tenant"))
+            if (User.IsInRole(Roles.Tenant))
             {
                 var myTenantId = await GetCallerTenantId();
                 if (myTenantId == null) return Ok(new List<Lease>());
@@ -58,7 +58,7 @@ namespace PropertyLeasingAPI.Controllers
 
             if (lease == null) return NotFound();
 
-            if (!User.IsInRole("PropertyManager"))
+            if (!User.IsInRole(Roles.PropertyManager))
             {
                 var myTenantId = await GetCallerTenantId();
                 if (myTenantId == null || lease.TenantId != myTenantId) return Forbid();
@@ -69,7 +69,7 @@ namespace PropertyLeasingAPI.Controllers
 
         // GET: api/Leases/active — manager-only oversight view.
         [HttpGet("active")]
-        [Authorize(Roles = "PropertyManager")]
+        [Authorize(Roles = Roles.PropertyManager)]
         public async Task<ActionResult<IEnumerable<Lease>>> GetActiveLeases()
         {
             return await _context.Leases
@@ -83,7 +83,7 @@ namespace PropertyLeasingAPI.Controllers
 
         // GET: api/Leases/applications — manager-only triage view.
         [HttpGet("applications")]
-        [Authorize(Roles = "PropertyManager")]
+        [Authorize(Roles = Roles.PropertyManager)]
         public async Task<ActionResult<IEnumerable<Lease>>> GetLeaseApplications()
         {
             return await _context.Leases
@@ -97,7 +97,7 @@ namespace PropertyLeasingAPI.Controllers
 
         // POST: api/Leases
         [HttpPost]
-        [Authorize(Roles = "PropertyManager,Tenant")]
+        [Authorize(Roles = Roles.PropertyManager + "," + Roles.Tenant)]
         public async Task<ActionResult<Lease>> PostLease(Lease lease)
         {
             // L1: auto-fill MonthlyRent BEFORE [Range(0.01, ...)] can reject a 0 value.
@@ -147,7 +147,7 @@ namespace PropertyLeasingAPI.Controllers
 
         // PUT: api/Leases/5
         [HttpPut("{id}")]
-        [Authorize(Roles = "PropertyManager")]
+        [Authorize(Roles = Roles.PropertyManager)]
         public async Task<IActionResult> PutLease(int id, Lease lease)
         {
             if (id != lease.LeaseId) return BadRequest();
@@ -186,7 +186,7 @@ namespace PropertyLeasingAPI.Controllers
         // PUT: api/Leases/5/status — advance lease lifecycle through the state machine
         // B10.3: API now exposes status transitions (previously only MVC did).
         [HttpPut("{id}/status")]
-        [Authorize(Roles = "PropertyManager")]
+        [Authorize(Roles = Roles.PropertyManager)]
         public async Task<IActionResult> PutLeaseStatus(int id, [FromBody] LeaseStatus newStatus)
         {
             var lease = await _context.Leases.FindAsync(id);
@@ -204,7 +204,7 @@ namespace PropertyLeasingAPI.Controllers
 
         // DELETE: api/Leases/5
         [HttpDelete("{id}")]
-        [Authorize(Roles = "PropertyManager")]
+        [Authorize(Roles = Roles.PropertyManager)]
         public async Task<IActionResult> DeleteLease(int id)
         {
             var lease = await _context.Leases.FindAsync(id);
