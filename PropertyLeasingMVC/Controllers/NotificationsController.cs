@@ -1,9 +1,11 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using PropertyLeasingAPI.Data;
 using PropertyLeasingAPI.Models;
+using PropertyLeasingMVC.Hubs;
 
 namespace PropertyLeasingMVC.Controllers
 {
@@ -78,7 +80,17 @@ namespace PropertyLeasingMVC.Controllers
         }
 
         // Helper: Create a notification (called from other controllers)
-        public static async Task CreateNotification(AppDbContext context, string userId, string title, string message, NotificationType type, string? linkUrl = null)
+        // L11: hubContext is optional — when supplied, the new notification is also
+        // pushed live to the user's SignalR group so the bell badge / toast updates
+        // without a page reload.
+        public static async Task CreateNotification(
+            AppDbContext context,
+            string userId,
+            string title,
+            string message,
+            NotificationType type,
+            string? linkUrl = null,
+            IHubContext<NotificationHub>? hubContext = null)
         {
             var notification = new Notification
             {
@@ -91,6 +103,21 @@ namespace PropertyLeasingMVC.Controllers
             };
             context.Notifications.Add(notification);
             await context.SaveChangesAsync();
+
+            if (hubContext != null && !string.IsNullOrEmpty(userId))
+            {
+                await hubContext.Clients.Group($"user-{userId}").SendAsync(
+                    "ReceiveNotification",
+                    new
+                    {
+                        notificationId = notification.NotificationId,
+                        title = notification.Title,
+                        message = notification.Message,
+                        type = notification.Type.ToString(),
+                        linkUrl = notification.LinkUrl,
+                        createdAt = notification.CreatedAt
+                    });
+            }
         }
     }
 }

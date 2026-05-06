@@ -16,15 +16,18 @@ namespace PropertyLeasingMVC.Controllers
     {
         private readonly AppDbContext _context;
         private readonly IHubContext<MaintenanceHub> _hubContext;
+        private readonly IHubContext<NotificationHub> _notificationHub;
         private readonly UserManager<ApplicationUser> _userManager;
 
         public MaintenanceRequestsController(
             AppDbContext context,
             IHubContext<MaintenanceHub> hubContext,
+            IHubContext<NotificationHub> notificationHub,
             UserManager<ApplicationUser> userManager)
         {
             _context = context;
             _hubContext = hubContext;
+            _notificationHub = notificationHub;
             _userManager = userManager;
         }
 
@@ -112,7 +115,8 @@ namespace PropertyLeasingMVC.Controllers
                 "New Assignment",
                 $"You have been assigned to maintenance request: {request.Title}",
                 NotificationType.MaintenanceUpdate,
-                $"/MaintenanceRequests/Details/{request.RequestId}");
+                $"/MaintenanceRequests/Details/{request.RequestId}",
+                _notificationHub);
 
             // Notify tenant
             var tenant = await _context.Tenants.FirstOrDefaultAsync(t => t.TenantId == request.TenantId);
@@ -123,7 +127,8 @@ namespace PropertyLeasingMVC.Controllers
                     "Request Assigned",
                     $"Your maintenance request \"{request.Title}\" has been assigned to staff.",
                     NotificationType.MaintenanceUpdate,
-                    $"/MaintenanceRequests/Details/{request.RequestId}");
+                    $"/MaintenanceRequests/Details/{request.RequestId}",
+                    _notificationHub);
             }
 
             // Notify via SignalR — send group-scoped + include unit number
@@ -174,7 +179,8 @@ namespace PropertyLeasingMVC.Controllers
                     $"Request {newStatus}",
                     $"Your maintenance request \"{request.Title}\" status changed to {newStatus}.",
                     NotificationType.MaintenanceUpdate,
-                    $"/MaintenanceRequests/Details/{request.RequestId}");
+                    $"/MaintenanceRequests/Details/{request.RequestId}",
+                    _notificationHub);
             }
 
             // If assigned staff exists, notify them too
@@ -185,7 +191,8 @@ namespace PropertyLeasingMVC.Controllers
                     $"Request {newStatus}",
                     $"Maintenance request \"{request.Title}\" status changed to {newStatus}.",
                     NotificationType.MaintenanceUpdate,
-                    $"/MaintenanceRequests/Details/{request.RequestId}");
+                    $"/MaintenanceRequests/Details/{request.RequestId}",
+                    _notificationHub);
             }
 
             // Notify via SignalR — include unit number for the live board
@@ -260,6 +267,28 @@ namespace PropertyLeasingMVC.Controllers
         public async Task<IActionResult> Edit(int id, [Bind("RequestId,PropertyId,UnitId,TenantId,Title,Description,Category,Priority,Status,AssignedStaffId,StaffNotes,DateSubmitted,DateAssigned,DateResolved")] MaintenanceRequest maintenanceRequest)
         {
             if (id != maintenanceRequest.RequestId) return NotFound();
+
+            // L3: MaintenanceStaff are allowed to edit only Status + StaffNotes.
+            // Reload everything else from DB so an over-posted form can't reassign tickets.
+            if (User.IsInRole("MaintenanceStaff") && !User.IsInRole("PropertyManager"))
+            {
+                var existing = await _context.MaintenanceRequests
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(m => m.RequestId == id);
+                if (existing == null) return NotFound();
+
+                maintenanceRequest.PropertyId       = existing.PropertyId;
+                maintenanceRequest.UnitId           = existing.UnitId;
+                maintenanceRequest.TenantId         = existing.TenantId;
+                maintenanceRequest.Title            = existing.Title;
+                maintenanceRequest.Description      = existing.Description;
+                maintenanceRequest.Category         = existing.Category;
+                maintenanceRequest.Priority         = existing.Priority;
+                maintenanceRequest.AssignedStaffId  = existing.AssignedStaffId;
+                maintenanceRequest.DateSubmitted    = existing.DateSubmitted;
+                maintenanceRequest.DateAssigned     = existing.DateAssigned;
+                // Status + StaffNotes + DateResolved keep the values posted by the staff form.
+            }
 
             var validationError = await ValidateUnitVsStandalone(maintenanceRequest);
             if (validationError != null)

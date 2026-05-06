@@ -1,9 +1,11 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using PropertyLeasingAPI.Data;
 using PropertyLeasingAPI.Models;
 using Microsoft.AspNetCore.Authorization;
+using PropertyLeasingMVC.Hubs;
 
 namespace PropertyLeasingMVC.Controllers
 {
@@ -11,10 +13,12 @@ namespace PropertyLeasingMVC.Controllers
     public class PaymentsController : Controller
     {
         private readonly AppDbContext _context;
+        private readonly IHubContext<NotificationHub> _notificationHub;
 
-        public PaymentsController(AppDbContext context)
+        public PaymentsController(AppDbContext context, IHubContext<NotificationHub> notificationHub)
         {
             _context = context;
+            _notificationHub = notificationHub;
         }
 
         // GET: Payments
@@ -138,7 +142,8 @@ namespace PropertyLeasingMVC.Controllers
                     "Payment Received",
                     $"Your payment of {payment.Amount:N3} BD has been marked as paid.",
                     NotificationType.PaymentReminder,
-                    $"/Payments/Details/{payment.PaymentId}");
+                    $"/Payments/Details/{payment.PaymentId}",
+                    _notificationHub);
             }
 
             TempData["SuccessMessage"] = "Payment marked as paid!";

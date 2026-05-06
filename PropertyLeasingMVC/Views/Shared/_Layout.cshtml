@@ -141,6 +141,64 @@
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
+
+    @if (User.Identity!.IsAuthenticated)
+    {
+        <!-- L11: live notification listener — pops a toast when CreateNotification fires -->
+        <div id="notif-toast-region"
+             class="position-fixed top-0 end-0 p-3"
+             style="z-index: 1080;"></div>
+
+        <script src="~/lib/microsoft/signalr/dist/browser/signalr.min.js"></script>
+        <script>
+            (function () {
+                var conn = new signalR.HubConnectionBuilder()
+                    .withUrl("/notificationHub")
+                    .withAutomaticReconnect()
+                    .build();
+
+                conn.on("ReceiveNotification", function (n) {
+                    // Bump the navbar bell badge (or create one if it isn't there yet).
+                    var navLink = document.querySelector('a[href="/Notifications"]');
+                    if (navLink) {
+                        var badge = navLink.querySelector('.badge');
+                        if (badge) {
+                            var current = parseInt(badge.innerText, 10) || 0;
+                            badge.innerText = current + 1;
+                        } else {
+                            var span = document.createElement('span');
+                            span.className = 'badge bg-danger rounded-pill';
+                            span.innerText = '1';
+                            navLink.appendChild(document.createTextNode(' '));
+                            navLink.appendChild(span);
+                        }
+                    }
+
+                    // Toast popup (vanilla — no extra deps).
+                    var region = document.getElementById('notif-toast-region');
+                    if (!region) return;
+                    var toast = document.createElement('div');
+                    toast.className = 'toast align-items-center text-bg-info border-0 show mb-2';
+                    toast.setAttribute('role', 'alert');
+                    var safeTitle = (n.title || 'Notification').toString().replace(/[<>]/g, '');
+                    var safeMsg   = (n.message || '').toString().replace(/[<>]/g, '');
+                    toast.innerHTML =
+                        '<div class="d-flex">' +
+                            '<div class="toast-body">' +
+                                '<strong>' + safeTitle + '</strong><br>' +
+                                '<small>' + safeMsg + '</small>' +
+                            '</div>' +
+                            '<button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>' +
+                        '</div>';
+                    region.appendChild(toast);
+                    setTimeout(function () { toast.remove(); }, 6000);
+                });
+
+                conn.start().catch(function (err) { console.error('NotificationHub:', err); });
+            })();
+        </script>
+    }
+
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

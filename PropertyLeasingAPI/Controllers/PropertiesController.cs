@@ -101,6 +101,13 @@ namespace PropertyLeasingAPI.Controllers
             var property = await _context.Properties.FindAsync(id);
             if (property == null) return NotFound();
 
+            // L5: Lease/MaintenanceRequest → Property is Restrict; pre-check so we return
+            // a clear 400 instead of a 500 from a DbUpdateException.
+            if (await _context.Leases.AnyAsync(l => l.PropertyId == id))
+                return BadRequest(new { error = "Cannot delete: property has lease history." });
+            if (await _context.MaintenanceRequests.AnyAsync(m => m.PropertyId == id))
+                return BadRequest(new { error = "Cannot delete: property has maintenance request history." });
+
             _context.Properties.Remove(property);
             await _context.SaveChangesAsync();
             return NoContent();

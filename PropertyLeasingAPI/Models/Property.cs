@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 
 namespace PropertyLeasingAPI.Models
 {
@@ -45,8 +46,13 @@ namespace PropertyLeasingAPI.Models
         public ICollection<Lease> Leases { get; set; } = new List<Lease>();
         public ICollection<MaintenanceRequest> MaintenanceRequests { get; set; } = new List<MaintenanceRequest>();
 
-        // Convenience: a Property is "standalone" when it has no child Units.
+        // L4: convenience flag — only meaningful when Units has been eager-loaded via
+        // .Include(p => p.Units). For DB-backed checks where Include isn't practical,
+        // use AppDbContext.IsPropertyStandaloneAsync(propertyId) (see PropertyExtensions).
+        // [JsonIgnore] keeps the API response payloads clean and avoids the getter being
+        // invoked during serialization on entities loaded without the Units navigation.
         [NotMapped]
+        [JsonIgnore]
         public bool IsStandalone => Units == null || Units.Count == 0;
     }
 }

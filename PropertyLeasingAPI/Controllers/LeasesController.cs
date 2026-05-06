@@ -100,23 +100,7 @@ namespace PropertyLeasingAPI.Controllers
         [Authorize(Roles = "PropertyManager,Tenant")]
         public async Task<ActionResult<Lease>> PostLease(Lease lease)
         {
-            if (!ModelState.IsValid) return BadRequest(ModelState);
-
-            var unitRuleError = await ValidateUnitVsStandalone(lease);
-            if (unitRuleError != null)
-            {
-                ModelState.AddModelError(nameof(lease.UnitId), unitRuleError);
-                return BadRequest(ModelState);
-            }
-
-            if (await HasOverlap(lease))
-            {
-                ModelState.AddModelError(string.Empty,
-                    "Another approved or active lease already covers this date range for the same unit/property.");
-                return BadRequest(ModelState);
-            }
-
-            // Default MonthlyRent from the Unit/Property if caller omitted it.
+            // L1: auto-fill MonthlyRent BEFORE [Range(0.01, ...)] can reject a 0 value.
             if (lease.MonthlyRent <= 0)
             {
                 if (lease.UnitId.HasValue)
@@ -131,6 +115,24 @@ namespace PropertyLeasingAPI.Controllers
                         .FirstOrDefaultAsync(p => p.PropertyId == lease.PropertyId);
                     if (prop?.MonthlyRent != null) lease.MonthlyRent = prop.MonthlyRent.Value;
                 }
+                if (lease.MonthlyRent > 0)
+                    ModelState.Remove(nameof(Lease.MonthlyRent));
+            }
+
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+
+            var unitRuleError = await ValidateUnitVsStandalone(lease);
+            if (unitRuleError != null)
+            {
+                ModelState.AddModelError(nameof(lease.UnitId), unitRuleError);
+                return BadRequest(ModelState);
+            }
+
+            if (await HasOverlap(lease))
+            {
+                ModelState.AddModelError(string.Empty,
+                    "Another approved or active lease already covers this date range for the same unit/property.");
+                return BadRequest(ModelState);
             }
 
             // New leases start as Application

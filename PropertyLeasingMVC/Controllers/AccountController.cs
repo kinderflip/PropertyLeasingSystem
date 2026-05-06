@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using PropertyLeasingAPI.Data;
 using PropertyLeasingAPI.Models;
+using PropertyLeasingAPI.Services;
 using PropertyLeasingMVC.ViewModels;
 
 namespace PropertyLeasingMVC.Controllers
@@ -84,12 +85,15 @@ namespace PropertyLeasingMVC.Controllers
                 return View(model);
             }
 
+            // L13: normalize phone once and re-use the canonical value everywhere we save it.
+            var canonicalPhone = PhoneHelper.Normalize(model.Phone);
+
             var user = new ApplicationUser
             {
                 UserName = model.Email,
                 Email = model.Email,
                 FullName = model.FullName,
-                PhoneNumber = model.Phone
+                PhoneNumber = canonicalPhone
             };
 
             var result = await _userManager.CreateAsync(user, model.Password);
@@ -104,7 +108,7 @@ namespace PropertyLeasingMVC.Controllers
                 {
                     FullName = model.FullName,
                     Email = model.Email,
-                    Phone = model.Phone,
+                    Phone = canonicalPhone,
                     NationalId = model.NationalId,
                     UserId = user.Id
                 };

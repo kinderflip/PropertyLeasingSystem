@@ -1,10 +1,12 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using PropertyLeasingAPI.Data;
 using PropertyLeasingAPI.Models;
 using PropertyLeasingAPI.Services;
 using Microsoft.AspNetCore.Authorization;
+using PropertyLeasingMVC.Hubs;
 
 namespace PropertyLeasingMVC.Controllers
 {
@@ -12,10 +14,12 @@ namespace PropertyLeasingMVC.Controllers
     public class LeasesController : Controller
     {
         private readonly AppDbContext _context;
+        private readonly IHubContext<NotificationHub> _notificationHub;
 
-        public LeasesController(AppDbContext context)
+        public LeasesController(AppDbContext context, IHubContext<NotificationHub> notificationHub)
         {
             _context = context;
+            _notificationHub = notificationHub;
         }
 
         // GET: Leases
@@ -72,6 +76,27 @@ namespace PropertyLeasingMVC.Controllers
         [Authorize(Roles = "PropertyManager,Tenant")]
         public async Task<IActionResult> Create([Bind("LeaseId,PropertyId,UnitId,TenantId,StartDate,EndDate,MonthlyRent,ApplicationNotes")] Lease lease)
         {
+            // L1: auto-fill MonthlyRent from the chosen Unit/Property BEFORE the
+            // [Range(0.01, ...)] attribute can reject a 0/empty submission.
+            if (lease.MonthlyRent <= 0)
+            {
+                if (lease.UnitId.HasValue)
+                {
+                    var unit = await _context.Units.AsNoTracking()
+                        .FirstOrDefaultAsync(u => u.UnitId == lease.UnitId.Value);
+                    if (unit != null) lease.MonthlyRent = unit.MonthlyRent;
+                }
+                else
+                {
+                    var prop = await _context.Properties.AsNoTracking()
+                        .FirstOrDefaultAsync(p => p.PropertyId == lease.PropertyId);
+                    if (prop?.MonthlyRent != null) lease.MonthlyRent = prop.MonthlyRent.Value;
+                }
+                // Drop the binding-time Range error now that we've supplied a real value.
+                if (lease.MonthlyRent > 0)
+                    ModelState.Remove(nameof(Lease.MonthlyRent));
+            }
+
             // Validate unit vs standalone (multi-unit must have UnitId, standalone must not)
             var validationError = await ValidateUnitVsStandalone(lease);
             if (validationError != null)
@@ -86,21 +111,6 @@ namespace PropertyLeasingMVC.Controllers
 
             if (ModelState.IsValid)
             {
-                // Default MonthlyRent if not provided
-                if (lease.MonthlyRent <= 0)
-                {
-                    if (lease.UnitId.HasValue)
-                    {
-                        var unit = await _context.Units.FindAsync(lease.UnitId.Value);
-                        if (unit != null) lease.MonthlyRent = unit.MonthlyRent;
-                    }
-                    else
-                    {
-                        var prop = await _context.Properties.FindAsync(lease.PropertyId);
-                        if (prop?.MonthlyRent != null) lease.MonthlyRent = prop.MonthlyRent.Value;
-                    }
-                }
-
                 lease.Status = LeaseStatus.Application;
                 lease.ApplicationDate = DateTime.Now;
                 _context.Add(lease);
@@ -117,7 +127,7 @@ namespace PropertyLeasingMVC.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "PropertyManager")]
-        public async Task<IActionResult> UpdateStatus(int id, LeaseStatus newStatus, string? screeningNotes)
+        public async Task<IActionResult> UpdateStatus(int id, LeaseStatus newStatus, string? screeningNotes, DateTime? newEndDate)
         {
             var lease = await _context.Leases
                 .Include(l => l.Property)
@@ -130,6 +140,26 @@ namespace PropertyLeasingMVC.Controllers
             {
                 TempData["ErrorMessage"] = $"Cannot transition from {lease.Status} to {newStatus}.";
                 return RedirectToAction(nameof(Details), new { id });
+            }
+
+            // L14: Renewal → Active should extend the lease term. Accept an explicit new
+            // EndDate from the renewal form; fall back to "+12 months" if the manager
+            // didn't supply one. Reject dates that aren't strictly later than the current end.
+            if (lease.Status == LeaseStatus.Renewal && newStatus == LeaseStatus.Active)
+            {
+                if (newEndDate.HasValue)
+                {
+                    if (newEndDate.Value.Date <= lease.EndDate.Date)
+                    {
+                        TempData["ErrorMessage"] = "Renewal end date must be later than the current end date.";
+                        return RedirectToAction(nameof(Details), new { id });
+                    }
+                    lease.EndDate = newEndDate.Value;
+                }
+                else
+                {
+                    lease.EndDate = lease.EndDate.AddMonths(12);
+                }
             }
 
             lease.Status = newStatus;
@@ -168,7 +198,8 @@ namespace PropertyLeasingMVC.Controllers
                     $"Lease {newStatus}",
                     $"Your lease application for {location} has been updated to {newStatus}.",
                     NotificationType.LeaseUpdate,
-                    $"/Leases/Details/{lease.LeaseId}");
+                    $"/Leases/Details/{lease.LeaseId}",
+                    _notificationHub);
             }
 
             TempData["SuccessMessage"] = $"Lease status updated to {newStatus} successfully!";
@@ -192,9 +223,19 @@ namespace PropertyLeasingMVC.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "PropertyManager")]
-        public async Task<IActionResult> Edit(int id, [Bind("LeaseId,PropertyId,UnitId,TenantId,StartDate,EndDate,MonthlyRent,Status,ApplicationDate,ApplicationNotes,ScreeningNotes,ApprovalDate")] Lease lease)
+        public async Task<IActionResult> Edit(int id, [Bind("LeaseId,PropertyId,UnitId,TenantId,StartDate,EndDate,MonthlyRent,ApplicationDate,ApplicationNotes,ScreeningNotes,ApprovalDate")] Lease lease)
         {
             if (id != lease.LeaseId) return NotFound();
+
+            // L2: Status is owned by the lifecycle (UpdateStatus + StatusTransitions).
+            // Reload it from DB so a hand-crafted Edit POST cannot bypass the state machine.
+            var existingStatus = await _context.Leases
+                .AsNoTracking()
+                .Where(l => l.LeaseId == id)
+                .Select(l => (LeaseStatus?)l.Status)
+                .FirstOrDefaultAsync();
+            if (existingStatus == null) return NotFound();
+            lease.Status = existingStatus.Value;
 
             var validationError = await ValidateUnitVsStandalone(lease);
             if (validationError != null)

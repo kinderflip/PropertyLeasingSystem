@@ -180,12 +180,22 @@
                             break;
 
                         case PropertyLeasingAPI.Models.LeaseStatus.Renewal:
-                            <form asp-action="UpdateStatus" method="post" class="d-inline">
+                            @* L14: renewal must extend the lease term — capture a new end date. *@
+                            <form asp-action="UpdateStatus" method="post" class="row g-2 align-items-end">
                                 <input type="hidden" name="id" value="@Model.LeaseId" />
                                 <input type="hidden" name="newStatus" value="@((int)PropertyLeasingAPI.Models.LeaseStatus.Active)" />
-                                <button type="submit" class="btn btn-success me-2">Renew (Activate)</button>
+                                <div class="col-md-5">
+                                    <label class="form-label small mb-1">New End Date</label>
+                                    <input type="date" name="newEndDate" class="form-control"
+                                           min="@DateTime.Today.ToString("yyyy-MM-dd")"
+                                           value="@Model.EndDate.AddYears(1).ToString("yyyy-MM-dd")" required />
+                                </div>
+                                <div class="col-md-7">
+                                    <button type="submit" class="btn btn-success">Renew (Activate)</button>
+                                    <small class="text-muted ms-2">must be after @Model.EndDate.ToString("dd MMM yyyy")</small>
+                                </div>
                             </form>
-                            <form asp-action="UpdateStatus" method="post" class="d-inline">
+                            <form asp-action="UpdateStatus" method="post" class="d-inline mt-2">
                                 <input type="hidden" name="id" value="@Model.LeaseId" />
                                 <input type="hidden" name="newStatus" value="@((int)PropertyLeasingAPI.Models.LeaseStatus.Terminated)" />
                                 <button type="submit" class="btn btn-danger">Terminate</button>

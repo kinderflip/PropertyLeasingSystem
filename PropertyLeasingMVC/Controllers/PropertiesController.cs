@@ -146,11 +146,30 @@ namespace PropertyLeasingMVC.Controllers
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
             var property = await _context.Properties.FindAsync(id);
-            if (property != null)
+            if (property == null)
             {
-                _context.Properties.Remove(property);
+                TempData["ErrorMessage"] = "Property not found.";
+                return RedirectToAction(nameof(Index));
             }
 
+            // L5: Lease → Property is configured with DeleteBehavior.Restrict, so the SaveChanges
+            // call would throw a DbUpdateException for a property that has any lease history.
+            // Fail clearly instead of bubbling a 500.
+            var blockingLeases = await _context.Leases.AnyAsync(l => l.PropertyId == id);
+            if (blockingLeases)
+            {
+                TempData["ErrorMessage"] = "Cannot delete this property — it still has lease records. Delete or archive the leases first.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            var blockingMaintenance = await _context.MaintenanceRequests.AnyAsync(m => m.PropertyId == id);
+            if (blockingMaintenance)
+            {
+                TempData["ErrorMessage"] = "Cannot delete this property — it still has maintenance request history.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            _context.Properties.Remove(property);
             await _context.SaveChangesAsync();
             TempData["SuccessMessage"] = "Property deleted successfully!";
             return RedirectToAction(nameof(Index));

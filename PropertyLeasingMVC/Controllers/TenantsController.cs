@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using PropertyLeasingAPI.Data;
 using PropertyLeasingAPI.Models;
+using PropertyLeasingAPI.Services;
 using Microsoft.AspNetCore.Authorization;
 namespace PropertyLeasingMVC.Controllers
 {
@@ -59,6 +60,9 @@ namespace PropertyLeasingMVC.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("TenantId,FullName,Email,Phone,NationalId,UserId")] Tenant tenant)
         {
+            // L13: store the canonical (digits-only) form so Track can find the row reliably.
+            tenant.Phone = PhoneHelper.Normalize(tenant.Phone);
+
             if (ModelState.IsValid)
             {
                 _context.Add(tenant);
@@ -98,6 +102,9 @@ namespace PropertyLeasingMVC.Controllers
             {
                 return NotFound();
             }
+
+            // L13: keep stored phones in canonical form on every update.
+            tenant.Phone = PhoneHelper.Normalize(tenant.Phone);
 
             if (ModelState.IsValid)
             {

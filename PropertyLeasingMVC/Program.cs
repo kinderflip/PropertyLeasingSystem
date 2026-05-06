@@ -91,6 +91,7 @@ app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapHub<MaintenanceHub>("/maintenanceHub");
+app.MapHub<NotificationHub>("/notificationHub");
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
