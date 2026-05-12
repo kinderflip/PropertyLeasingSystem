@@ -108,23 +108,23 @@ namespace PropertyLeasingAPI.Migrations
                 keyColumn: "TenantId",
                 keyValue: 1,
                 columns: new[] { "Email", "FullName", "NationalId" },
-                values: new object[] { "ahmed.mansoori@example.bh", "Ahmed bin Mohammed Al Mansoori", "870412345" });
+                values: new object[] { "ahmed.hassan@example.bh", "Ahmed Hassan", "870412345" });
 
             migrationBuilder.UpdateData(
                 table: "Tenants",
                 keyColumn: "TenantId",
                 keyValue: 2,
                 columns: new[] { "Email", "FullName", "NationalId" },
-                values: new object[] { "sara.khalifa@example.bh", "Sara bint Khalifa Al Khalifa", "900823456" });
+                values: new object[] { "sara.faisal@example.bh", "Sara Faisal", "900823456" });
 
             migrationBuilder.InsertData(
                 table: "Tenants",
                 columns: new[] { "TenantId", "Email", "FullName", "NationalId", "Phone", "UserId" },
                 values: new object[,]
                 {
-                    { 101, "fatima.dosari@example.bh", "Fatima bint Isa Al Dosari", "920345678", "+97333778899", null },
-                    { 102, "hamad.mahmood@example.bh", "Hamad bin Salman Al Mahmood", "850612345", "+97333224455", null },
-                    { 103, "noor.zayani@example.bh", "Noor bint Ali Al Zayani", "940109876", "+97333557788", null }
+                    { 101, "fatima.yousef@example.bh", "Fatima Yousef", "920345678", "+97333778899", null },
+                    { 102, "sami.mohamed@example.bh", "Sami Mohamed", "850612345", "+97333224455", null },
+                    { 103, "nada.tariq@example.bh", "Nada Tariq", "940109876", "+97333557788", null }
                 });
 
             migrationBuilder.InsertData(
@@ -311,14 +311,14 @@ namespace PropertyLeasingAPI.Migrations
                 keyColumn: "TenantId",
                 keyValue: 1,
                 columns: new[] { "Email", "FullName", "NationalId" },
-                values: new object[] { "ahmed@email.com", "Ahmed Al Mansoori", "880112345" });
+                values: new object[] { "ahmed.hassan@example.bh", "Ahmed Hassan", "880112345" });
 
             migrationBuilder.UpdateData(
                 table: "Tenants",
                 keyColumn: "TenantId",
                 keyValue: 2,
                 columns: new[] { "Email", "FullName", "NationalId" },
-                values: new object[] { "sara@email.com", "Sara Al Khalifa", "920567890" });
+                values: new object[] { "sara.faisal@example.bh", "Sara Faisal", "920567890" });
 
             migrationBuilder.AddForeignKey(
                 name: "FK_Leases_Properties_PropertyId",

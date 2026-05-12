@@ -558,40 +558,40 @@ namespace PropertyLeasingAPI.Migrations
                         new
                         {
                             TenantId = 1,
-                            Email = "ahmed.mansoori@example.bh",
-                            FullName = "Ahmed bin Mohammed Al Mansoori",
+                            Email = "ahmed.hassan@example.bh",
+                            FullName = "Ahmed Hassan",
                             NationalId = "870412345",
                             Phone = "+97333112233"
                         },
                         new
                         {
                             TenantId = 2,
-                            Email = "sara.khalifa@example.bh",
-                            FullName = "Sara bint Khalifa Al Khalifa",
+                            Email = "sara.faisal@example.bh",
+                            FullName = "Sara Faisal",
                             NationalId = "900823456",
                             Phone = "+97333445566"
                         },
                         new
                         {
                             TenantId = 101,
-                            Email = "fatima.dosari@example.bh",
-                            FullName = "Fatima bint Isa Al Dosari",
+                            Email = "fatima.yousef@example.bh",
+                            FullName = "Fatima Yousef",
                             NationalId = "920345678",
                             Phone = "+97333778899"
                         },
                         new
                         {
                             TenantId = 102,
-                            Email = "hamad.mahmood@example.bh",
-                            FullName = "Hamad bin Salman Al Mahmood",
+                            Email = "sami.mohamed@example.bh",
+                            FullName = "Sami Mohamed",
                             NationalId = "850612345",
                             Phone = "+97333224455"
                         },
                         new
                         {
                             TenantId = 103,
-                            Email = "noor.zayani@example.bh",
-                            FullName = "Noor bint Ali Al Zayani",
+                            Email = "nada.tariq@example.bh",
+                            FullName = "Nada Tariq",
                             NationalId = "940109876",
                             Phone = "+97333557788"
                         });

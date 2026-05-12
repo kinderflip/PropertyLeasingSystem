@@ -9,7 +9,7 @@ builder.Services.AddControllersWithViews();
 builder.Services.AddSignalR();
 builder.Services.AddHttpClient("PropertyAPI", client =>
 {
-    client.BaseAddress = new Uri("https://propertyleasing-api-dshpa8bbdna7fpbs.westeurope-01.azurewebsites.net/");
+    client.BaseAddress = new Uri("https://propertyleasing-api-s8g4-dpf3dha4acf4e4gy.westeurope-01.azurewebsites.net/");
 });
 // Add DbContext - same database as API
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -53,7 +53,7 @@ using (var scope = app.Services.CreateScope())
         {
             UserName = adminEmail,
             Email = adminEmail,
-            FullName = "Khalid bin Isa Al Fakhro",
+            FullName = "Ahmed Faisal",
             EmailConfirmed = true
         };
         await userManager.CreateAsync(adminUser, adminPassword);
@@ -67,7 +67,7 @@ using (var scope = app.Services.CreateScope())
         {
             UserName = staffEmail,
             Email = staffEmail,
-            FullName = "Salman bin Hamad Al Kanoo",
+            FullName = "Bader Hamed",
             EmailConfirmed = true
         };
         await userManager.CreateAsync(staffUser, staffPassword);

@@ -304,8 +304,8 @@ namespace PropertyLeasingAPI.Migrations
                 columns: new[] { "TenantId", "Email", "FullName", "NationalId", "Phone", "UserId" },
                 values: new object[,]
                 {
-                    { 1, "ahmed@email.com", "Ahmed Al Mansoori", "880112345", "+97333112233", null },
-                    { 2, "sara@email.com", "Sara Al Khalifa", "920567890", "+97333445566", null }
+                    { 1, "ahmed.hassan@example.bh", "Ahmed Hassan", "880112345", "+97333112233", null },
+                    { 2, "sara.faisal@example.bh", "Sara Faisal", "920567890", "+97333445566", null }
                 });
 
             migrationBuilder.CreateIndex(

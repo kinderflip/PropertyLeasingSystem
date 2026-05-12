@@ -4,7 +4,7 @@ builder.Services.AddControllersWithViews();
 // HttpClient to call the API
 builder.Services.AddHttpClient("PropertyAPI", client =>
 {
-    client.BaseAddress = new Uri("https://propertyleasing-api-dshpa8bbdna7fpbs.westeurope-01.azurewebsites.net/");
+    client.BaseAddress = new Uri("https://propertyleasing-api-s8g4-dpf3dha4acf4e4gy.westeurope-01.azurewebsites.net/");
 });
 // Cookie authentication for the reporting app login
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)

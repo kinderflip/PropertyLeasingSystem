@@ -89,12 +89,11 @@ namespace PropertyLeasingAPI.Data
         private static void SeedTenants(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<Tenant>().HasData(
-                new Tenant { TenantId = 1,   FullName = "Ahmed bin Mohammed Al Mansoori", Email = "ahmed.mansoori@example.bh", Phone = "+97333112233", NationalId = "870412345" },
-                new Tenant { TenantId = 2,   FullName = "Sara bint Khalifa Al Khalifa",   Email = "sara.khalifa@example.bh",   Phone = "+97333445566", NationalId = "900823456" },
-                // IDs 101+ to avoid collisions with live-created tenants in Azure SQL.
-                new Tenant { TenantId = 101, FullName = "Fatima bint Isa Al Dosari",      Email = "fatima.dosari@example.bh",  Phone = "+97333778899", NationalId = "920345678" },
-                new Tenant { TenantId = 102, FullName = "Hamad bin Salman Al Mahmood",    Email = "hamad.mahmood@example.bh",  Phone = "+97333224455", NationalId = "850612345" },
-                new Tenant { TenantId = 103, FullName = "Noor bint Ali Al Zayani",        Email = "noor.zayani@example.bh",    Phone = "+97333557788", NationalId = "940109876" }
+                new Tenant { TenantId = 1,   FullName = "Ahmed Hassan", Email = "ahmed.hassan@example.bh", Phone = "+97333112233", NationalId = "870412345" },
+                new Tenant { TenantId = 2,   FullName = "Sara Faisal",  Email = "sara.faisal@example.bh",  Phone = "+97333445566", NationalId = "900823456" },
+                new Tenant { TenantId = 101, FullName = "Fatima Yousef", Email = "fatima.yousef@example.bh", Phone = "+97333778899", NationalId = "920345678" },
+                new Tenant { TenantId = 102, FullName = "Sami Mohamed",  Email = "sami.mohamed@example.bh",  Phone = "+97333224455", NationalId = "850612345" },
+                new Tenant { TenantId = 103, FullName = "Nada Tariq",    Email = "nada.tariq@example.bh",    Phone = "+97333557788", NationalId = "940109876" }
             );
         }
     }

@@ -465,16 +465,16 @@ namespace PropertyLeasingAPI.Migrations
                         new
                         {
                             TenantId = 1,
-                            Email = "ahmed@email.com",
-                            FullName = "Ahmed Al Mansoori",
+                            Email = "ahmed.hassan@example.bh",
+                            FullName = "Ahmed Hassan",
                             NationalId = "880112345",
                             Phone = "+97333112233"
                         },
                         new
                         {
                             TenantId = 2,
-                            Email = "sara@email.com",
-                            FullName = "Sara Al Khalifa",
+                            Email = "sara.faisal@example.bh",
+                            FullName = "Sara Faisal",
                             NationalId = "920567890",
                             Phone = "+97333445566"
                         });

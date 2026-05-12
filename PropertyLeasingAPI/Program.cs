@@ -82,8 +82,8 @@ builder.Services.AddCors(options =>
         policy.WithOrigins(
                 "https://localhost:7133",
                 "http://localhost:5133",
-                "https://propertyleasing-mvc-gmhxb7bba2a6g4av.westeurope-01.azurewebsites.net",
-                "https://propertyleasing-reports-h3e9euhja6dbdffp.westeurope-01.azurewebsites.net")
+                "https://propertyleasing-mvc-s8g4-amf0eugmfgdqemb3.westeurope-01.azurewebsites.net",
+                "https://propertyleasing-reports-s8g4-cbdwg3h2h5fjg8b9.westeurope-01.azurewebsites.net")
               .AllowAnyHeader()
               .AllowAnyMethod();
     });

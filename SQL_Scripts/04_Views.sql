@@ -1,18 +1,11 @@
--- ============================================
--- Property Leasing System - SQL Views
--- Database: PropertyLeasingDB (Azure SQL)
--- Project: IT8118 Advanced Programming - Brief B
--- ============================================
+-- SQL views used by reports and dashboards.
 
--- ============================================
--- View: Active Leases with Property and Tenant Details
--- ============================================
 CREATE OR ALTER VIEW [dbo].[vw_ActiveLeases]
 AS
     SELECT
         l.[LeaseId],
         p.[Address] AS PropertyAddress,
-        p.[City] AS PropertyCity,
+        p.[City]    AS PropertyCity,
         u.[UnitNumber],
         CASE p.[PropertyType]
             WHEN 0 THEN 'Apartment'
@@ -21,8 +14,8 @@ AS
             WHEN 3 THEN 'Office'
         END AS PropertyType,
         t.[FullName] AS TenantName,
-        t.[Email] AS TenantEmail,
-        t.[Phone] AS TenantPhone,
+        t.[Email]    AS TenantEmail,
+        t.[Phone]    AS TenantPhone,
         l.[StartDate],
         l.[EndDate],
         l.[MonthlyRent],
@@ -40,14 +33,11 @@ AS
         END AS StatusName
     FROM [Leases] l
     INNER JOIN [Properties] p ON l.[PropertyId] = p.[PropertyId]
-    LEFT  JOIN [Units] u      ON l.[UnitId]     = u.[UnitId]
-    INNER JOIN [Tenants] t    ON l.[TenantId]   = t.[TenantId]
-    WHERE l.[Status] = 4;  -- Active
+    LEFT  JOIN [Units]      u ON l.[UnitId]     = u.[UnitId]
+    INNER JOIN [Tenants]    t ON l.[TenantId]   = t.[TenantId]
+    WHERE l.[Status] = 4;
 GO
 
--- ============================================
--- View: Overdue Payments Summary
--- ============================================
 CREATE OR ALTER VIEW [dbo].[vw_OverduePayments]
 AS
     SELECT
@@ -61,21 +51,18 @@ AS
             WHEN 2 THEN 'Fine'
         END AS PaymentType,
         t.[FullName] AS TenantName,
-        t.[Phone] AS TenantPhone,
-        p.[Address] AS PropertyAddress,
+        t.[Phone]    AS TenantPhone,
+        p.[Address]  AS PropertyAddress,
         u.[UnitNumber],
         l.[LeaseId]
-    FROM [Payments] pay
-    INNER JOIN [Leases] l    ON pay.[LeaseId] = l.[LeaseId]
-    INNER JOIN [Tenants] t   ON l.[TenantId]  = t.[TenantId]
+    FROM [Payments]   pay
+    INNER JOIN [Leases]     l ON pay.[LeaseId]  = l.[LeaseId]
+    INNER JOIN [Tenants]    t ON l.[TenantId]   = t.[TenantId]
     INNER JOIN [Properties] p ON l.[PropertyId] = p.[PropertyId]
-    LEFT  JOIN [Units] u     ON l.[UnitId]     = u.[UnitId]
-    WHERE pay.[Status] = 2;  -- Overdue
+    LEFT  JOIN [Units]      u ON l.[UnitId]     = u.[UnitId]
+    WHERE pay.[Status] = 2;
 GO
 
--- ============================================
--- View: Open Maintenance Requests
--- ============================================
 CREATE OR ALTER VIEW [dbo].[vw_OpenMaintenanceRequests]
 AS
     SELECT
@@ -101,21 +88,18 @@ AS
         END AS Status,
         m.[DateSubmitted],
         DATEDIFF(DAY, m.[DateSubmitted], GETDATE()) AS DaysOpen,
-        p.[Address] AS PropertyAddress,
+        p.[Address]  AS PropertyAddress,
         un.[UnitNumber],
         t.[FullName] AS TenantName,
         staff.[FullName] AS AssignedStaffName
     FROM [MaintenanceRequests] m
-    INNER JOIN [Properties] p    ON m.[PropertyId] = p.[PropertyId]
-    LEFT  JOIN [Units] un        ON m.[UnitId]     = un.[UnitId]
-    INNER JOIN [Tenants] t       ON m.[TenantId]   = t.[TenantId]
-    LEFT  JOIN [AspNetUsers] staff ON m.[AssignedStaffId] = staff.[Id]
-    WHERE m.[Status] IN (0, 1, 2);  -- Submitted, Assigned, InProgress
+    INNER JOIN [Properties]   p     ON m.[PropertyId]      = p.[PropertyId]
+    LEFT  JOIN [Units]        un    ON m.[UnitId]          = un.[UnitId]
+    INNER JOIN [Tenants]      t     ON m.[TenantId]        = t.[TenantId]
+    LEFT  JOIN [AspNetUsers]  staff ON m.[AssignedStaffId] = staff.[Id]
+    WHERE m.[Status] IN (0, 1, 2);
 GO
 
--- ============================================
--- View: Property Revenue Summary
--- ============================================
 CREATE OR ALTER VIEW [dbo].[vw_PropertyRevenueSummary]
 AS
     SELECT
@@ -124,27 +108,27 @@ AS
         p.[City],
         CASE WHEN EXISTS (SELECT 1 FROM [Units] u WHERE u.[PropertyId] = p.[PropertyId])
              THEN 'Multi-unit' ELSE 'Standalone' END AS Mode,
-        ISNULL(p.[MonthlyRent], (SELECT SUM(u.[MonthlyRent]) FROM [Units] u WHERE u.[PropertyId] = p.[PropertyId])) AS ListedRent,
+        ISNULL(p.[MonthlyRent],
+               (SELECT SUM(u.[MonthlyRent]) FROM [Units] u WHERE u.[PropertyId] = p.[PropertyId])) AS ListedRent,
         (SELECT COUNT(*) FROM [Units] u WHERE u.[PropertyId] = p.[PropertyId]) AS UnitsCount,
         CASE p.[Status]
             WHEN 0 THEN 'Available'
             WHEN 1 THEN 'Leased'
             WHEN 2 THEN 'Under Maintenance'
-            ELSE   'Managed-by-units'
+            ELSE   'Managed by units'
         END AS PropertyStatus,
         (SELECT COUNT(*) FROM [Leases] l WHERE l.[PropertyId] = p.[PropertyId]) AS TotalLeases,
-        ISNULL((SELECT SUM(pay.[Amount]) FROM [Leases] l
+        ISNULL((SELECT SUM(pay.[Amount])
+                FROM [Leases] l
                 INNER JOIN [Payments] pay ON l.[LeaseId] = pay.[LeaseId]
                 WHERE l.[PropertyId] = p.[PropertyId] AND pay.[Status] = 1), 0) AS TotalCollected,
-        ISNULL((SELECT SUM(pay.[Amount]) FROM [Leases] l
+        ISNULL((SELECT SUM(pay.[Amount])
+                FROM [Leases] l
                 INNER JOIN [Payments] pay ON l.[LeaseId] = pay.[LeaseId]
                 WHERE l.[PropertyId] = p.[PropertyId] AND pay.[Status] IN (0, 2)), 0) AS TotalOutstanding
     FROM [Properties] p;
 GO
 
--- ============================================
--- View: Tenant Payment History
--- ============================================
 CREATE OR ALTER VIEW [dbo].[vw_TenantPaymentHistory]
 AS
     SELECT
@@ -158,10 +142,7 @@ AS
         ISNULL(SUM(CASE WHEN pay.[Status] = 2 THEN pay.[Amount] ELSE 0 END), 0) AS TotalOverdue,
         COUNT(CASE WHEN pay.[Status] = 2 THEN 1 END) AS OverdueCount
     FROM [Tenants] t
-    LEFT JOIN [Leases] l ON t.[TenantId] = l.[TenantId]
-    LEFT JOIN [Payments] pay ON l.[LeaseId] = pay.[LeaseId]
+    LEFT JOIN [Leases]   l   ON t.[TenantId] = l.[TenantId]
+    LEFT JOIN [Payments] pay ON l.[LeaseId]  = pay.[LeaseId]
     GROUP BY t.[TenantId], t.[FullName], t.[Email], t.[Phone];
-GO
-
-PRINT 'Views created successfully.';
 GO

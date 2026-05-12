@@ -1,35 +1,21 @@
--- ============================================
--- Property Leasing System - Stored Procedures
--- Database: PropertyLeasingDB (Azure SQL)
--- Project: IT8118 Advanced Programming - Brief B
--- ============================================
+-- Stored procedures for the Property Leasing System.
 
--- ============================================
--- SP: Get Property Occupancy Summary  (multi-unit + standalone aware)
--- Mixes standalone property statuses with aggregated unit statuses.
--- ============================================
+-- Property occupancy summary.
+-- Treats standalone properties and individual units as "rentables".
 CREATE OR ALTER PROCEDURE [dbo].[sp_GetPropertyOccupancySummary]
 AS
 BEGIN
     SET NOCOUNT ON;
 
     ;WITH Rentables AS (
-        -- Standalone properties (no units)
-        SELECT
-            p.[PropertyId] AS OwnerPropertyId,
-            p.[Status]     AS RentableStatus,
-            p.[MonthlyRent] AS RentableRent
+        SELECT p.[PropertyId] AS OwnerPropertyId,
+               p.[Status]     AS RentableStatus,
+               p.[MonthlyRent] AS RentableRent
         FROM [Properties] p
         WHERE NOT EXISTS (SELECT 1 FROM [Units] u WHERE u.[PropertyId] = p.[PropertyId])
           AND p.[Status] IS NOT NULL
-
         UNION ALL
-
-        -- Each unit inside a multi-unit property
-        SELECT
-            u.[PropertyId] AS OwnerPropertyId,
-            u.[Status]     AS RentableStatus,
-            u.[MonthlyRent] AS RentableRent
+        SELECT u.[PropertyId], u.[Status], u.[MonthlyRent]
         FROM [Units] u
     )
     SELECT
@@ -48,65 +34,54 @@ BEGIN
 END
 GO
 
--- ============================================
--- SP: Get Overdue Payments with Tenant Details
--- Returns all overdue payments with tenant and property info
--- ============================================
+-- Flags overdue payments and returns them with tenant + property details.
 CREATE OR ALTER PROCEDURE [dbo].[sp_GetOverduePayments]
 AS
 BEGIN
     SET NOCOUNT ON;
 
-    -- First, auto-flag overdue payments
     UPDATE [Payments]
-    SET [Status] = 2  -- Overdue
-    WHERE [Status] = 0  -- Pending
-      AND [DueDate] < CAST(GETDATE() AS DATE);
+       SET [Status] = 2
+     WHERE [Status] = 0
+       AND [DueDate] < CAST(GETDATE() AS DATE);
 
-    -- Then return them with details
     SELECT
         p.[PaymentId],
         p.[Amount],
         p.[DueDate],
         DATEDIFF(DAY, p.[DueDate], GETDATE()) AS DaysOverdue,
         t.[FullName] AS TenantName,
-        t.[Phone] AS TenantPhone,
-        t.[Email] AS TenantEmail,
+        t.[Phone]    AS TenantPhone,
+        t.[Email]    AS TenantEmail,
         pr.[Address] AS PropertyAddress,
-        pr.[City] AS PropertyCity,
+        pr.[City]    AS PropertyCity,
         un.[UnitNumber],
         l.[LeaseId]
     FROM [Payments] p
-    INNER JOIN [Leases] l       ON p.[LeaseId]     = l.[LeaseId]
-    INNER JOIN [Tenants] t      ON l.[TenantId]    = t.[TenantId]
-    INNER JOIN [Properties] pr  ON l.[PropertyId]  = pr.[PropertyId]
-    LEFT  JOIN [Units] un       ON l.[UnitId]      = un.[UnitId]
+    INNER JOIN [Leases]     l  ON p.[LeaseId]    = l.[LeaseId]
+    INNER JOIN [Tenants]    t  ON l.[TenantId]   = t.[TenantId]
+    INNER JOIN [Properties] pr ON l.[PropertyId] = pr.[PropertyId]
+    LEFT  JOIN [Units]      un ON l.[UnitId]     = un.[UnitId]
     WHERE p.[Status] = 2
-    ORDER BY p.[DueDate] ASC;
+    ORDER BY p.[DueDate];
 END
 GO
 
--- ============================================
--- SP: Get Maintenance Resolution Statistics
--- Returns avg resolution time and counts by category/priority
--- ============================================
+-- Maintenance request statistics.
 CREATE OR ALTER PROCEDURE [dbo].[sp_GetMaintenanceStatistics]
 AS
 BEGIN
     SET NOCOUNT ON;
 
-    -- Overall stats
     SELECT
         COUNT(*) AS TotalRequests,
         SUM(CASE WHEN [Status] IN (0, 1, 2) THEN 1 ELSE 0 END) AS OpenRequests,
         SUM(CASE WHEN [Status] IN (3, 4) THEN 1 ELSE 0 END) AS ResolvedRequests,
-        AVG(CASE
-            WHEN [DateResolved] IS NOT NULL
-            THEN CAST(DATEDIFF(DAY, [DateSubmitted], [DateResolved]) AS FLOAT)
-        END) AS AvgResolutionDays
+        AVG(CASE WHEN [DateResolved] IS NOT NULL
+                 THEN CAST(DATEDIFF(DAY, [DateSubmitted], [DateResolved]) AS FLOAT)
+            END) AS AvgResolutionDays
     FROM [MaintenanceRequests];
 
-    -- By category
     SELECT
         CASE [Category]
             WHEN 0 THEN 'Plumbing'
@@ -121,7 +96,6 @@ BEGIN
     GROUP BY [Category]
     ORDER BY [Category];
 
-    -- By priority
     SELECT
         CASE [Priority]
             WHEN 0 THEN 'Low'
@@ -130,20 +104,16 @@ BEGIN
             WHEN 3 THEN 'Urgent'
         END AS PriorityName,
         COUNT(*) AS TotalCount,
-        AVG(CASE
-            WHEN [DateResolved] IS NOT NULL
-            THEN CAST(DATEDIFF(DAY, [DateSubmitted], [DateResolved]) AS FLOAT)
-        END) AS AvgResolutionDays
+        AVG(CASE WHEN [DateResolved] IS NOT NULL
+                 THEN CAST(DATEDIFF(DAY, [DateSubmitted], [DateResolved]) AS FLOAT)
+            END) AS AvgResolutionDays
     FROM [MaintenanceRequests]
     GROUP BY [Priority]
     ORDER BY [Priority];
 END
 GO
 
--- ============================================
--- SP: Get Lease Lifecycle Summary
--- Returns lease counts and revenue by status
--- ============================================
+-- Lease counts and average rent by status.
 CREATE OR ALTER PROCEDURE [dbo].[sp_GetLeaseSummary]
 AS
 BEGIN
@@ -169,18 +139,14 @@ BEGIN
 END
 GO
 
--- ============================================
--- SP: Get Monthly Revenue Report
--- Returns monthly payment collection totals
--- ============================================
+-- Monthly revenue. Defaults to current year if @Year is not supplied.
 CREATE OR ALTER PROCEDURE [dbo].[sp_GetMonthlyRevenue]
     @Year INT = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
 
-    IF @Year IS NULL
-        SET @Year = YEAR(GETDATE());
+    IF @Year IS NULL SET @Year = YEAR(GETDATE());
 
     SELECT
         MONTH(p.[DueDate]) AS MonthNumber,
@@ -195,7 +161,4 @@ BEGIN
     GROUP BY MONTH(p.[DueDate]), DATENAME(MONTH, p.[DueDate])
     ORDER BY MONTH(p.[DueDate]);
 END
-GO
-
-PRINT 'Stored procedures created successfully.';
 GO
