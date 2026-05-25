@@ -1,7 +1,5 @@
 using System.ComponentModel.DataAnnotations;
 using PropertyLeasingAPI.Models;
-using PropertyLeasingAPI.Services;
-
 namespace PropertyLeasingMVC.ViewModels
 {
     /// <summary>
@@ -31,7 +29,7 @@ namespace PropertyLeasingMVC.ViewModels
             TenantId   = TenantId,
             FullName   = FullName,
             Email      = Email,
-            Phone      = PhoneHelper.Normalize(Phone),
+            Phone      = Phone,
             NationalId = NationalId,
             UserId     = UserId
         };

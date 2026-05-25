@@ -1,4 +1,4 @@
-@model PropertyLeasingMVC.ViewModels.PaginatedList<PropertyLeasingAPI.Models.Tenant>
+@model IEnumerable<PropertyLeasingAPI.Models.Tenant>
 
 @{
     ViewData["Title"] = "Tenants";
@@ -56,4 +56,3 @@
     </div>
 </div>
 
-<partial name="_Pagination" model="Model" />
