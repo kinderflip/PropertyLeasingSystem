@@ -5,7 +5,7 @@ namespace PropertyLeasingAPI.Models
 {
     public enum LeaseStatus { Application, Screening, Approved, Rejected, Active, Renewal, Expired, Terminated }
 
-    public class Lease : IValidatableObject
+    public class Lease
     {
         public int LeaseId { get; set; }
 
@@ -13,7 +13,7 @@ namespace PropertyLeasingAPI.Models
         [Display(Name = "Property")]
         public int PropertyId { get; set; }
 
-        // Null when the Property is standalone. Required when the Property has Units.
+        // Null when the property is standalone. Required when the property has units.
         [Display(Name = "Unit")]
         public int? UnitId { get; set; }
 
@@ -28,6 +28,7 @@ namespace PropertyLeasingAPI.Models
 
         [Required]
         [DataType(DataType.Date)]
+        [EndDateAfterStartDate]
         [Display(Name = "End Date")]
         public DateTime EndDate { get; set; }
 
@@ -60,23 +61,17 @@ namespace PropertyLeasingAPI.Models
         public Unit? Unit { get; set; }
         public Tenant? Tenant { get; set; }
         public ICollection<Payment> Payments { get; set; } = new List<Payment>();
+    }
 
-        // Cross-property validation
-        public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    // Custom validation attribute: ensures EndDate is after StartDate.
+    public class EndDateAfterStartDateAttribute : ValidationAttribute
+    {
+        protected override ValidationResult? IsValid(object? value, ValidationContext context)
         {
-            if (EndDate <= StartDate)
-                yield return new ValidationResult(
-                    "End date must be after start date.",
-                    new[] { nameof(EndDate) });
-
-            if (Status == LeaseStatus.Application && StartDate.Date < DateTime.Today)
-                yield return new ValidationResult(
-                    "Start date cannot be in the past.",
-                    new[] { nameof(StartDate) });
-
-            // Multi-unit vs standalone rule (enforced at service/controller level where Property can be loaded).
-            // The Lease itself cannot see Property.Units here because the graph may not be loaded,
-            // so the final check lives in LeasesController.Create / Put.
+            var lease = (Lease)context.ObjectInstance;
+            if (value is DateTime end && end <= lease.StartDate)
+                return new ValidationResult("End date must be after start date.");
+            return ValidationResult.Success;
         }
     }
 }

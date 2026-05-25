@@ -24,7 +24,6 @@ namespace PropertyLeasingAPI.Controllers
         {
             return await _context.Units
                 .Include(u => u.Property)
-                .AsNoTracking()
                 .ToListAsync();
         }
 
@@ -34,7 +33,6 @@ namespace PropertyLeasingAPI.Controllers
         {
             var unit = await _context.Units
                 .Include(u => u.Property)
-                .AsNoTracking()
                 .FirstOrDefaultAsync(u => u.UnitId == id);
 
             if (unit == null) return NotFound();
@@ -50,7 +48,6 @@ namespace PropertyLeasingAPI.Controllers
 
             return await _context.Units
                 .Where(u => u.PropertyId == propertyId)
-                .AsNoTracking()
                 .ToListAsync();
         }
 
@@ -61,13 +58,12 @@ namespace PropertyLeasingAPI.Controllers
             return await _context.Units
                 .Include(u => u.Property)
                 .Where(u => u.Status == UnitStatus.Available)
-                .AsNoTracking()
                 .ToListAsync();
         }
 
         // POST: api/Units
         [HttpPost]
-        [Authorize(Roles = Roles.PropertyManager)]
+        [Authorize(Roles = "PropertyManager")]
         public async Task<ActionResult<Unit>> PostUnit(Unit unit)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
@@ -104,7 +100,7 @@ namespace PropertyLeasingAPI.Controllers
 
         // PUT: api/Units/5
         [HttpPut("{id}")]
-        [Authorize(Roles = Roles.PropertyManager)]
+        [Authorize(Roles = "PropertyManager")]
         public async Task<IActionResult> PutUnit(int id, Unit unit)
         {
             if (id != unit.UnitId) return BadRequest();
@@ -140,7 +136,7 @@ namespace PropertyLeasingAPI.Controllers
 
         // DELETE: api/Units/5
         [HttpDelete("{id}")]
-        [Authorize(Roles = Roles.PropertyManager)]
+        [Authorize(Roles = "PropertyManager")]
         public async Task<IActionResult> DeleteUnit(int id)
         {
             var unit = await _context.Units.FindAsync(id);

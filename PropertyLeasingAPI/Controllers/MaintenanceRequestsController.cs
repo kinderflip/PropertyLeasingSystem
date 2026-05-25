@@ -1,5 +1,4 @@
 using System.Security.Claims;
-using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -30,19 +29,18 @@ namespace PropertyLeasingAPI.Controllers
                 .Include(m => m.Unit)
                 .Include(m => m.Tenant)
                 .Include(m => m.AssignedStaff)
-                .AsNoTracking()
                 .AsQueryable();
 
-            if (User.IsInRole(Roles.PropertyManager))
+            if (User.IsInRole("PropertyManager"))
                 return await query.ToListAsync();
 
-            if (User.IsInRole(Roles.MaintenanceStaff))
+            if (User.IsInRole("MaintenanceStaff"))
             {
                 var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
                 return await query.Where(m => m.AssignedStaffId == userId).ToListAsync();
             }
 
-            if (User.IsInRole(Roles.Tenant))
+            if (User.IsInRole("Tenant"))
             {
                 var myTenantId = await GetCallerTenantId();
                 if (myTenantId == null) return Ok(new List<MaintenanceRequest>());
@@ -63,12 +61,11 @@ namespace PropertyLeasingAPI.Controllers
                 .Include(m => m.Unit)
                 .Include(m => m.Tenant)
                 .Include(m => m.AssignedStaff)
-                .AsNoTracking()
                 .FirstOrDefaultAsync(m => m.RequestId == id);
 
             if (request == null) return NotFound();
 
-            if (!User.IsInRole(Roles.PropertyManager))
+            if (!User.IsInRole("PropertyManager"))
             {
                 var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
                 var myTenantId = await GetCallerTenantId();
@@ -95,7 +92,6 @@ namespace PropertyLeasingAPI.Controllers
                 .Include(m => m.Unit)
                 .Include(m => m.Tenant)
                 .Include(m => m.AssignedStaff)
-                .AsNoTracking()
                 .FirstOrDefaultAsync(m => m.RequestId == ticketId);
 
             if (request == null)
@@ -128,7 +124,7 @@ namespace PropertyLeasingAPI.Controllers
 
         // GET: api/MaintenanceRequests/pending — manager + staff triage view.
         [HttpGet("pending")]
-        [Authorize(Roles = Roles.PropertyManager + "," + Roles.MaintenanceStaff)]
+        [Authorize(Roles = "PropertyManager,MaintenanceStaff")]
         public async Task<ActionResult<IEnumerable<MaintenanceRequest>>> GetPendingRequests()
         {
             return await _context.MaintenanceRequests
@@ -137,13 +133,12 @@ namespace PropertyLeasingAPI.Controllers
                 .Include(m => m.Tenant)
                 .Include(m => m.AssignedStaff)
                 .Where(m => m.Status == MaintenanceStatus.Submitted || m.Status == MaintenanceStatus.Assigned)
-                .AsNoTracking()
                 .ToListAsync();
         }
 
         // POST: api/MaintenanceRequests
         [HttpPost]
-        [Authorize(Roles = Roles.PropertyManager + "," + Roles.Tenant)]
+        [Authorize(Roles = "PropertyManager,Tenant")]
         public async Task<ActionResult<MaintenanceRequest>> PostMaintenanceRequest(MaintenanceRequest request)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
@@ -165,7 +160,7 @@ namespace PropertyLeasingAPI.Controllers
 
         // PUT: api/MaintenanceRequests/5
         [HttpPut("{id}")]
-        [Authorize(Roles = Roles.PropertyManager + "," + Roles.MaintenanceStaff)]
+        [Authorize(Roles = "PropertyManager,MaintenanceStaff")]
         public async Task<IActionResult> PutMaintenanceRequest(int id, MaintenanceRequest request)
         {
             if (id != request.RequestId) return BadRequest();
@@ -204,7 +199,7 @@ namespace PropertyLeasingAPI.Controllers
 
         // DELETE: api/MaintenanceRequests/5
         [HttpDelete("{id}")]
-        [Authorize(Roles = Roles.PropertyManager)]
+        [Authorize(Roles = "PropertyManager")]
         public async Task<IActionResult> DeleteMaintenanceRequest(int id)
         {
             var request = await _context.MaintenanceRequests.FindAsync(id);
@@ -221,7 +216,6 @@ namespace PropertyLeasingAPI.Controllers
         {
             var property = await _context.Properties
                 .Include(p => p.Units)
-                .AsNoTracking()
                 .FirstOrDefaultAsync(p => p.PropertyId == propertyId);
             if (property == null) return "Property not found.";
 
@@ -243,8 +237,8 @@ namespace PropertyLeasingAPI.Controllers
         private static bool PhoneMatches(string stored, string submitted)
         {
             if (string.IsNullOrEmpty(stored) || string.IsNullOrEmpty(submitted)) return false;
-            var a = Regex.Replace(stored, @"\D", "");
-            var b = Regex.Replace(submitted, @"\D", "");
+            var a = new string(stored.Where(char.IsDigit).ToArray());
+            var b = new string(submitted.Where(char.IsDigit).ToArray());
             return a.Length > 0 && a == b;
         }
 

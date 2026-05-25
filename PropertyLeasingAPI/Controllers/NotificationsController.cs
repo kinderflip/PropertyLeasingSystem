@@ -21,12 +21,11 @@ namespace PropertyLeasingAPI.Controllers
 
         // GET: api/Notifications — PropertyManager only (admin view)
         [HttpGet]
-        [Authorize(Roles = Roles.PropertyManager)]
+        [Authorize(Roles = "PropertyManager")]
         public async Task<ActionResult<IEnumerable<Notification>>> GetNotifications()
         {
             return await _context.Notifications
                 .OrderByDescending(n => n.CreatedAt)
-                .AsNoTracking()
                 .ToListAsync();
         }
 
@@ -40,7 +39,6 @@ namespace PropertyLeasingAPI.Controllers
             return await _context.Notifications
                 .Where(n => n.UserId == userId)
                 .OrderByDescending(n => n.CreatedAt)
-                .AsNoTracking()
                 .ToListAsync();
         }
 
@@ -89,7 +87,7 @@ namespace PropertyLeasingAPI.Controllers
         // B3: ownership guard — caller must match userId or be a PropertyManager.
         private bool IsSelfOrManager(string targetUserId)
         {
-            if (User.IsInRole(Roles.PropertyManager)) return true;
+            if (User.IsInRole("PropertyManager")) return true;
             var callerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             return !string.IsNullOrEmpty(callerId) && callerId == targetUserId;
         }

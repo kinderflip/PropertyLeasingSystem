@@ -24,7 +24,6 @@ namespace PropertyLeasingAPI.Controllers
         {
             return await _context.Properties
                 .Include(p => p.Units)
-                .AsNoTracking()
                 .ToListAsync();
         }
 
@@ -34,7 +33,6 @@ namespace PropertyLeasingAPI.Controllers
         {
             var property = await _context.Properties
                 .Include(p => p.Units)
-                .AsNoTracking()
                 .FirstOrDefaultAsync(p => p.PropertyId == id);
             if (property == null) return NotFound();
             return property;
@@ -52,13 +50,12 @@ namespace PropertyLeasingAPI.Controllers
                     ||
                     p.Units.Any(u => u.Status == UnitStatus.Available)         // multi-unit w/ any available unit
                 )
-                .AsNoTracking()
                 .ToListAsync();
         }
 
         // POST: api/Properties
         [HttpPost]
-        [Authorize(Roles = Roles.PropertyManager)]
+        [Authorize(Roles = "PropertyManager")]
         public async Task<ActionResult<Property>> PostProperty(Property property)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
@@ -71,7 +68,7 @@ namespace PropertyLeasingAPI.Controllers
 
         // PUT: api/Properties/5
         [HttpPut("{id}")]
-        [Authorize(Roles = Roles.PropertyManager)]
+        [Authorize(Roles = "PropertyManager")]
         public async Task<IActionResult> PutProperty(int id, Property property)
         {
             if (id != property.PropertyId) return BadRequest();
@@ -95,7 +92,7 @@ namespace PropertyLeasingAPI.Controllers
 
         // DELETE: api/Properties/5
         [HttpDelete("{id}")]
-        [Authorize(Roles = Roles.PropertyManager)]
+        [Authorize(Roles = "PropertyManager")]
         public async Task<IActionResult> DeleteProperty(int id)
         {
             var property = await _context.Properties.FindAsync(id);

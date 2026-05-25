@@ -31,10 +31,10 @@ namespace PropertyLeasingAPI.Controllers
                 .OrderByDescending(p => p.DueDate)
                 .AsQueryable();
 
-            if (User.IsInRole(Roles.PropertyManager))
+            if (User.IsInRole("PropertyManager"))
                 return await query.ToListAsync();
 
-            if (User.IsInRole(Roles.Tenant))
+            if (User.IsInRole("Tenant"))
             {
                 var myTenantId = await GetCallerTenantId();
                 if (myTenantId == null) return Ok(new List<Payment>());
@@ -55,7 +55,7 @@ namespace PropertyLeasingAPI.Controllers
 
             if (payment == null) return NotFound();
 
-            if (!User.IsInRole(Roles.PropertyManager))
+            if (!User.IsInRole("PropertyManager"))
             {
                 var myTenantId = await GetCallerTenantId();
                 if (myTenantId == null || payment.Lease?.TenantId != myTenantId) return Forbid();
@@ -69,7 +69,7 @@ namespace PropertyLeasingAPI.Controllers
         [HttpGet("lease/{leaseId}")]
         public async Task<ActionResult<IEnumerable<Payment>>> GetPaymentsByLease(int leaseId)
         {
-            if (!User.IsInRole(Roles.PropertyManager))
+            if (!User.IsInRole("PropertyManager"))
             {
                 var myTenantId = await GetCallerTenantId();
                 if (myTenantId == null) return Forbid();
@@ -87,7 +87,7 @@ namespace PropertyLeasingAPI.Controllers
 
         // GET: api/Payments/overdue — manager-only oversight view.
         [HttpGet("overdue")]
-        [Authorize(Roles = Roles.PropertyManager)]
+        [Authorize(Roles = "PropertyManager")]
         public async Task<ActionResult<IEnumerable<Payment>>> GetOverduePayments()
         {
             await FlagOverduePayments();
@@ -102,7 +102,7 @@ namespace PropertyLeasingAPI.Controllers
 
         // POST: api/Payments
         [HttpPost]
-        [Authorize(Roles = Roles.PropertyManager)]
+        [Authorize(Roles = "PropertyManager")]
         public async Task<ActionResult<Payment>> PostPayment(Payment payment)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
@@ -115,7 +115,7 @@ namespace PropertyLeasingAPI.Controllers
 
         // DELETE: api/Payments/5
         [HttpDelete("{id}")]
-        [Authorize(Roles = Roles.PropertyManager)]
+        [Authorize(Roles = "PropertyManager")]
         public async Task<IActionResult> DeletePayment(int id)
         {
             var payment = await _context.Payments.FindAsync(id);
