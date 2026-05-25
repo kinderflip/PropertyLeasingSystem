@@ -24,11 +24,11 @@ namespace PropertyLeasingMVC.Controllers
         }
 
         // M5: tenant-scoped view of own payments.
-        [Authorize(Roles = Roles.Tenant + "," + Roles.PropertyManager)]
+        [Authorize(Roles = "PropertyManager,Tenant")]
         public async Task<IActionResult> MyPayments(int page = 1)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            var emptyPage = new PaginatedList<Payment>(new List<Payment>(), 0, 1, 20);
+            var emptyPage = new List<Payment>();
 
             if (string.IsNullOrEmpty(userId)) return View("Index", emptyPage);
 
@@ -50,11 +50,11 @@ namespace PropertyLeasingMVC.Controllers
                 .OrderByDescending(p => p.DueDate);
 
             ViewBag.MyView = true;
-            return View("Index", await PaginatedList<Payment>.CreateAsync(query, page, 20));
+            return View("Index", await query.ToListAsync());
         }
 
         // GET: Payments
-        public async Task<IActionResult> Index(string? searchString, PaymentStatus? status, PaymentType? type, int page = 1)
+        public async Task<IActionResult> Index(string? searchString, PaymentStatus? status, PaymentType? type)
         {
             // Auto-flag overdue payments (normalise DueDate to date-only to avoid off-by-one)
             var today = DateTime.Today;
@@ -91,8 +91,7 @@ namespace PropertyLeasingMVC.Controllers
             ViewBag.Status = status;
             ViewBag.Type = type;
 
-            return View(await PaginatedList<Payment>.CreateAsync(
-                payments.OrderByDescending(p => p.DueDate), page, 20));
+            return View(await payments.OrderByDescending(p => p.DueDate).ToListAsync());
         }
 
         // GET: Payments/Details/5
@@ -113,7 +112,7 @@ namespace PropertyLeasingMVC.Controllers
         }
 
         // GET: Payments/Create
-        [Authorize(Roles = Roles.PropertyManager)]
+        [Authorize(Roles = "PropertyManager")]
         public IActionResult Create()
         {
             ViewData["LeaseId"] = new SelectList(
@@ -129,7 +128,7 @@ namespace PropertyLeasingMVC.Controllers
         // POST: Payments/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Roles = Roles.PropertyManager)]
+        [Authorize(Roles = "PropertyManager")]
         public async Task<IActionResult> Create([Bind("PaymentId,LeaseId,Amount,DueDate,PaymentDate,PaymentType,Status")] Payment payment)
         {
             if (ModelState.IsValid)
@@ -156,7 +155,7 @@ namespace PropertyLeasingMVC.Controllers
         // POST: Payments/MarkAsPaid/5
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Roles = Roles.PropertyManager)]
+        [Authorize(Roles = "PropertyManager")]
         public async Task<IActionResult> MarkAsPaid(int id)
         {
             var payment = await _context.Payments.FindAsync(id);
@@ -184,7 +183,7 @@ namespace PropertyLeasingMVC.Controllers
         }
 
         // GET: Payments/Edit/5
-        [Authorize(Roles = Roles.PropertyManager)]
+        [Authorize(Roles = "PropertyManager")]
         public async Task<IActionResult> Edit(int? id)
         {
             if (id == null) return NotFound();
@@ -204,7 +203,7 @@ namespace PropertyLeasingMVC.Controllers
         // POST: Payments/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Roles = Roles.PropertyManager)]
+        [Authorize(Roles = "PropertyManager")]
         public async Task<IActionResult> Edit(int id, [Bind("PaymentId,LeaseId,Amount,DueDate,PaymentDate,PaymentType,Status")] Payment payment)
         {
             if (id != payment.PaymentId) return NotFound();
@@ -240,7 +239,7 @@ namespace PropertyLeasingMVC.Controllers
         }
 
         // GET: Payments/Delete/5
-        [Authorize(Roles = Roles.PropertyManager)]
+        [Authorize(Roles = "PropertyManager")]
         public async Task<IActionResult> Delete(int? id)
         {
             if (id == null) return NotFound();
@@ -260,7 +259,7 @@ namespace PropertyLeasingMVC.Controllers
         // POST: Payments/Delete/5
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
-        [Authorize(Roles = Roles.PropertyManager)]
+        [Authorize(Roles = "PropertyManager")]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
             var payment = await _context.Payments.FindAsync(id);

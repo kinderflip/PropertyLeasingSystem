@@ -20,17 +20,17 @@ namespace PropertyLeasingMVC.Controllers
         {
             var vm = new DashboardViewModel();
 
-            if (User.IsInRole(Roles.PropertyManager))
+            if (User.IsInRole("PropertyManager"))
             {
                 vm.Role = "PropertyManager";
                 await LoadManagerDashboard(vm);
             }
-            else if (User.IsInRole(Roles.MaintenanceStaff))
+            else if (User.IsInRole("MaintenanceStaff"))
             {
                 vm.Role = "MaintenanceStaff";
                 await LoadStaffDashboard(vm);
             }
-            else if (User.IsInRole(Roles.Tenant))
+            else if (User.IsInRole("Tenant"))
             {
                 vm.Role = "Tenant";
                 await LoadTenantDashboard(vm);

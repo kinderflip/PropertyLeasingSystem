@@ -19,7 +19,7 @@ namespace PropertyLeasingMVC.Controllers
         }
 
         // GET: Units?propertyId=1
-        public async Task<IActionResult> Index(int? propertyId, UnitStatus? status, UnitType? type, int page = 1)
+        public async Task<IActionResult> Index(int? propertyId, UnitStatus? status, UnitType? type)
         {
             var units = _context.Units.Include(u => u.Property).AsQueryable();
 
@@ -39,13 +39,11 @@ namespace PropertyLeasingMVC.Controllers
             if (propertyId.HasValue)
             {
                 var prop = await _context.Properties
-                    .AsNoTracking()
                     .FirstOrDefaultAsync(p => p.PropertyId == propertyId.Value);
                 ViewBag.PropertyName = prop == null ? null : $"{prop.Address}, {prop.City}";
             }
 
-            return View(await PaginatedList<Unit>.CreateAsync(
-                units.AsNoTracking().OrderBy(u => u.UnitNumber), page, 20));
+            return View(await units.OrderBy(u => u.UnitNumber).ToListAsync());
         }
 
         // GET: Units/Browse — public-facing listing for tenants to browse available units
@@ -69,7 +67,7 @@ namespace PropertyLeasingMVC.Controllers
             ViewBag.Type = type;
             ViewBag.MaxRent = maxRent;
 
-            return View(await q.AsNoTracking().ToListAsync());
+            return View(await q.ToListAsync());
         }
 
         // GET: Units/Details/5
@@ -81,7 +79,6 @@ namespace PropertyLeasingMVC.Controllers
                 .Include(u => u.Property)
                 .Include(u => u.Leases)!.ThenInclude(l => l.Tenant)
                 .Include(u => u.MaintenanceRequests)
-                .AsNoTracking()
                 .FirstOrDefaultAsync(m => m.UnitId == id);
 
             if (unit == null) return NotFound();
@@ -103,14 +100,13 @@ namespace PropertyLeasingMVC.Controllers
                     monthlyRent = u.MonthlyRent,
                     status = u.Status.ToString()
                 })
-                .AsNoTracking()
                 .ToListAsync();
 
             return Json(units);
         }
 
         // GET: Units/Create?propertyId=1
-        [Authorize(Roles = Roles.PropertyManager)]
+        [Authorize(Roles = "PropertyManager")]
         public async Task<IActionResult> Create(int? propertyId)
         {
             await PopulatePropertyDropdown(propertyId);
@@ -122,7 +118,7 @@ namespace PropertyLeasingMVC.Controllers
         }
 
         // POST: Units/Create
-        [Authorize(Roles = Roles.PropertyManager)]
+        [Authorize(Roles = "PropertyManager")]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("UnitId,PropertyId,UnitNumber,UnitType,Amenities,SizeSqm,MonthlyRent,Status,Description")] Unit unit)
@@ -161,7 +157,7 @@ namespace PropertyLeasingMVC.Controllers
         }
 
         // GET: Units/Edit/5
-        [Authorize(Roles = Roles.PropertyManager)]
+        [Authorize(Roles = "PropertyManager")]
         public async Task<IActionResult> Edit(int? id)
         {
             if (id == null) return NotFound();
@@ -173,7 +169,7 @@ namespace PropertyLeasingMVC.Controllers
         }
 
         // POST: Units/Edit/5
-        [Authorize(Roles = Roles.PropertyManager)]
+        [Authorize(Roles = "PropertyManager")]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, [Bind("UnitId,PropertyId,UnitNumber,UnitType,Amenities,SizeSqm,MonthlyRent,Status,Description")] Unit unit)
@@ -209,13 +205,12 @@ namespace PropertyLeasingMVC.Controllers
         }
 
         // GET: Units/Delete/5
-        [Authorize(Roles = Roles.PropertyManager)]
+        [Authorize(Roles = "PropertyManager")]
         public async Task<IActionResult> Delete(int? id)
         {
             if (id == null) return NotFound();
             var unit = await _context.Units
                 .Include(u => u.Property)
-                .AsNoTracking()
                 .FirstOrDefaultAsync(m => m.UnitId == id);
 
             if (unit == null) return NotFound();
@@ -223,7 +218,7 @@ namespace PropertyLeasingMVC.Controllers
         }
 
         // POST: Units/Delete/5
-        [Authorize(Roles = Roles.PropertyManager)]
+        [Authorize(Roles = "PropertyManager")]
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
@@ -252,7 +247,6 @@ namespace PropertyLeasingMVC.Controllers
             var props = await _context.Properties
                 .OrderBy(p => p.Address)
                 .Select(p => new { p.PropertyId, Label = p.Address + ", " + p.City })
-                .AsNoTracking()
                 .ToListAsync();
             ViewData["PropertyId"] = new SelectList(props, "PropertyId", "Label", selectedId);
         }

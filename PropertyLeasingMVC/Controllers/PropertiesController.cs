@@ -24,7 +24,7 @@ namespace PropertyLeasingMVC.Controllers
 
         // GET: Properties — M9: public so prospective tenants can browse without login.
         [AllowAnonymous]
-        public async Task<IActionResult> Index(string? searchString, PropertyStatus? status, PropertyType? type, int page = 1)
+        public async Task<IActionResult> Index(string? searchString, PropertyStatus? status, PropertyType? type)
         {
             var properties = _context.Properties.Include(p => p.Units).AsQueryable();
 
@@ -45,8 +45,7 @@ namespace PropertyLeasingMVC.Controllers
             ViewBag.Type = type;
 
             // P3: paginate.
-            return View(await PaginatedList<Property>.CreateAsync(
-                properties.AsNoTracking().OrderBy(p => p.Address), page, 20));
+            return View(await properties.OrderBy(p => p.Address).ToListAsync());
         }
 
         // GET: Properties/Details/5  — B10: eager-load Units + recent lease/maintenance
@@ -58,7 +57,6 @@ namespace PropertyLeasingMVC.Controllers
                 .Include(p => p.Units)
                 .Include(p => p.Leases!).ThenInclude(l => l.Tenant)
                 .Include(p => p.MaintenanceRequests)
-                .AsNoTracking()
                 .FirstOrDefaultAsync(m => m.PropertyId == id);
 
             if (property == null) return NotFound();
@@ -67,11 +65,11 @@ namespace PropertyLeasingMVC.Controllers
         }
 
         // GET: Properties/Create
-        [Authorize(Roles = Roles.PropertyManager)]
+        [Authorize(Roles = "PropertyManager")]
         public IActionResult Create() => View(new PropertyCreateViewModel { Address = "", City = "" });
 
         // POST: Properties/Create — Q4: bind a ViewModel, not the entity.
-        [Authorize(Roles = Roles.PropertyManager)]
+        [Authorize(Roles = "PropertyManager")]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(PropertyCreateViewModel vm)
@@ -87,7 +85,7 @@ namespace PropertyLeasingMVC.Controllers
         }
 
         // GET: Properties/Edit/5
-        [Authorize(Roles = Roles.PropertyManager)]
+        [Authorize(Roles = "PropertyManager")]
         public async Task<IActionResult> Edit(int? id)
         {
             if (id == null) return NotFound();
@@ -97,7 +95,7 @@ namespace PropertyLeasingMVC.Controllers
         }
 
         // POST: Properties/Edit/5 — Q4: ViewModel-bound.
-        [Authorize(Roles = Roles.PropertyManager)]
+        [Authorize(Roles = "PropertyManager")]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, PropertyCreateViewModel vm)
@@ -123,7 +121,7 @@ namespace PropertyLeasingMVC.Controllers
         }
 
         // GET: Properties/Delete/5
-        [Authorize(Roles = Roles.PropertyManager)]
+        [Authorize(Roles = "PropertyManager")]
         public async Task<IActionResult> Delete(int? id)
         {
             if (id == null) return NotFound();
@@ -137,7 +135,7 @@ namespace PropertyLeasingMVC.Controllers
         }
 
         // POST: Properties/Delete/5
-        [Authorize(Roles = Roles.PropertyManager)]
+        [Authorize(Roles = "PropertyManager")]
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)

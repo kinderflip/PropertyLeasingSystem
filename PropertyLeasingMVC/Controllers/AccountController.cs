@@ -2,7 +2,6 @@
 using Microsoft.AspNetCore.Mvc;
 using PropertyLeasingAPI.Data;
 using PropertyLeasingAPI.Models;
-using PropertyLeasingAPI.Services;
 using PropertyLeasingMVC.ViewModels;
 
 namespace PropertyLeasingMVC.Controllers
@@ -86,7 +85,7 @@ namespace PropertyLeasingMVC.Controllers
             }
 
             // L13: normalize phone once and re-use the canonical value everywhere we save it.
-            var canonicalPhone = PhoneHelper.Normalize(model.Phone);
+            var canonicalPhone = model.Phone;
 
             var user = new ApplicationUser
             {
@@ -100,7 +99,7 @@ namespace PropertyLeasingMVC.Controllers
 
             if (result.Succeeded)
             {
-                await _userManager.AddToRoleAsync(user, Roles.Tenant);
+                await _userManager.AddToRoleAsync(user, "Tenant");
 
                 // C2 — every self-registered user gets a paired Tenant entity so the
                 // Lease / MaintenanceRequest flows have something to bind to.

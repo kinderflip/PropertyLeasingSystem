@@ -3,50 +3,47 @@ using Microsoft.EntityFrameworkCore;
 using PropertyLeasingAPI.Data;
 using PropertyLeasingAPI.Models;
 using PropertyLeasingMVC.Hubs;
+
 var builder = WebApplication.CreateBuilder(args);
-// Add MVC
+
 builder.Services.AddControllersWithViews();
 builder.Services.AddSignalR();
+
 builder.Services.AddHttpClient("PropertyAPI", client =>
 {
-    client.BaseAddress = new Uri("https://propertyleasing-api-s8g4-dpf3dha4acf4e4gy.westeurope-01.azurewebsites.net/");
+    var apiBaseUrl = builder.Configuration["ApiSettings:BaseUrl"] ?? "https://localhost:7121/";
+    client.BaseAddress = new Uri(apiBaseUrl);
 });
-// Add DbContext - same database as API
+
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"),
-        sqlOptions => sqlOptions.EnableRetryOnFailure(
-            maxRetryCount: 5,
-            maxRetryDelay: TimeSpan.FromSeconds(30),
-            errorNumbersToAdd: null)));
-// Add Identity
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 {
     options.Password.RequireDigit = true;
     options.Password.RequiredLength = 6;
     options.Password.RequireNonAlphanumeric = false;
     options.Password.RequireUppercase = false;
-    options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
-    options.Lockout.MaxFailedAccessAttempts = 5;
     options.User.RequireUniqueEmail = true;
 })
 .AddEntityFrameworkStores<AppDbContext>()
 .AddDefaultTokenProviders();
-// Cookie settings
+
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.LoginPath = "/Account/Login";
     options.LogoutPath = "/Account/Logout";
     options.AccessDeniedPath = "/Account/AccessDenied";
-    options.ExpireTimeSpan = TimeSpan.FromHours(8);
 });
+
 var app = builder.Build();
-// Seed admin user on startup
+
+// Seed manager + staff users on startup
 using (var scope = app.Services.CreateScope())
 {
     var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+
     string adminEmail = "manager@property.com";
-    string adminPassword = "Manager123";
     if (await userManager.FindByEmailAsync(adminEmail) == null)
     {
         var adminUser = new ApplicationUser
@@ -56,11 +53,11 @@ using (var scope = app.Services.CreateScope())
             FullName = "Ahmed Faisal",
             EmailConfirmed = true
         };
-        await userManager.CreateAsync(adminUser, adminPassword);
+        await userManager.CreateAsync(adminUser, "Manager123");
         await userManager.AddToRoleAsync(adminUser, "PropertyManager");
     }
+
     string staffEmail = "staff@property.com";
-    string staffPassword = "Staff123";
     if (await userManager.FindByEmailAsync(staffEmail) == null)
     {
         var staffUser = new ApplicationUser
@@ -70,19 +67,14 @@ using (var scope = app.Services.CreateScope())
             FullName = "Bader Hamed",
             EmailConfirmed = true
         };
-        await userManager.CreateAsync(staffUser, staffPassword);
+        await userManager.CreateAsync(staffUser, "Staff123");
         await userManager.AddToRoleAsync(staffUser, "MaintenanceStaff");
     }
 }
-// C5: friendly error page in production, raw stack trace in dev.
-if (app.Environment.IsDevelopment())
-{
-    app.UseDeveloperExceptionPage();
-}
-else
+
+if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
-    app.UseHsts();
 }
 
 app.UseHttpsRedirection();

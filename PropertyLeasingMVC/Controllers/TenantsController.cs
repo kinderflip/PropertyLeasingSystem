@@ -7,7 +7,6 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using PropertyLeasingAPI.Data;
 using PropertyLeasingAPI.Models;
-using PropertyLeasingAPI.Services;
 using PropertyLeasingMVC.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 namespace PropertyLeasingMVC.Controllers
@@ -25,8 +24,7 @@ namespace PropertyLeasingMVC.Controllers
         // GET: Tenants
         public async Task<IActionResult> Index(int page = 1)
         {
-            return View(await PaginatedList<Tenant>.CreateAsync(
-                _context.Tenants.OrderBy(t => t.FullName), page, 20));
+            return View(await _context.Tenants.OrderBy(t => t.FullName).ToListAsync());
         }
 
         // GET: Tenants/Details/5
@@ -48,13 +46,13 @@ namespace PropertyLeasingMVC.Controllers
         }
 
         // GET: Tenants/Create
-        [Authorize(Roles = Roles.PropertyManager)]
+        [Authorize(Roles = "PropertyManager")]
         public IActionResult Create()
             => View(new TenantCreateViewModel { FullName = "", Email = "", Phone = "", NationalId = "" });
 
         // POST: Tenants/Create — Q4: VM-bound; L13: phone normalised inside ToEntity.
         [HttpPost]
-        [Authorize(Roles = Roles.PropertyManager)]
+        [Authorize(Roles = "PropertyManager")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(TenantCreateViewModel vm)
         {
@@ -69,7 +67,7 @@ namespace PropertyLeasingMVC.Controllers
         }
 
         // GET: Tenants/Edit/5
-        [Authorize(Roles = Roles.PropertyManager)]
+        [Authorize(Roles = "PropertyManager")]
         public async Task<IActionResult> Edit(int? id)
         {
             if (id == null) return NotFound();
@@ -80,7 +78,7 @@ namespace PropertyLeasingMVC.Controllers
 
         // POST: Tenants/Edit/5 — Q4: VM-bound.
         [HttpPost]
-        [Authorize(Roles = Roles.PropertyManager)]
+        [Authorize(Roles = "PropertyManager")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, TenantCreateViewModel vm)
         {
@@ -105,7 +103,7 @@ namespace PropertyLeasingMVC.Controllers
         }
 
         // GET: Tenants/Delete/5
-        [Authorize(Roles = Roles.PropertyManager)]
+        [Authorize(Roles = "PropertyManager")]
         public async Task<IActionResult> Delete(int? id)
         {
             if (id == null)
@@ -125,7 +123,7 @@ namespace PropertyLeasingMVC.Controllers
 
         // POST: Tenants/Delete/5
         [HttpPost, ActionName("Delete")]
-        [Authorize(Roles = Roles.PropertyManager)]
+        [Authorize(Roles = "PropertyManager")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
