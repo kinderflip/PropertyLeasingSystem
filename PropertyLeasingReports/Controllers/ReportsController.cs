@@ -29,16 +29,23 @@ namespace PropertyLeasingReports.Controllers
         public async Task<IActionResult> Properties()
         {
             var vm = new PropertiesReportViewModel();
-            var client = GetAuthenticatedClient();
-            var response = await client.GetAsync("api/Properties");
-            if (response.IsSuccessStatusCode)
+            try
             {
-                var json = await response.Content.ReadAsStringAsync();
-                vm.Properties = JsonSerializer.Deserialize<List<PropertyReport>>(json, _jsonOptions) ?? new();
+                var client = GetAuthenticatedClient();
+                var response = await client.GetAsync("api/Properties");
+                if (response.IsSuccessStatusCode)
+                {
+                    var json = await response.Content.ReadAsStringAsync();
+                    vm.Properties = JsonSerializer.Deserialize<List<PropertyReport>>(json, _jsonOptions) ?? new();
+                }
+                else
+                {
+                    ViewBag.Error = $"API returned {(int)response.StatusCode}. Please log in again if your session expired.";
+                }
             }
-            else
+            catch (Exception ex)
             {
-                ViewBag.Error = $"API returned {(int)response.StatusCode}. Please log in again if your session expired.";
+                ViewBag.Error = "Unable to load properties: " + ex.Message;
             }
 
             vm.TotalProperties = vm.Properties.Count;
@@ -59,16 +66,23 @@ namespace PropertyLeasingReports.Controllers
         public async Task<IActionResult> Maintenance()
         {
             var requests = new List<MaintenanceReport>();
-            var client = GetAuthenticatedClient();
-            var response = await client.GetAsync("api/MaintenanceRequests");
-            if (response.IsSuccessStatusCode)
+            try
             {
-                var json = await response.Content.ReadAsStringAsync();
-                requests = JsonSerializer.Deserialize<List<MaintenanceReport>>(json, _jsonOptions) ?? new();
+                var client = GetAuthenticatedClient();
+                var response = await client.GetAsync("api/MaintenanceRequests");
+                if (response.IsSuccessStatusCode)
+                {
+                    var json = await response.Content.ReadAsStringAsync();
+                    requests = JsonSerializer.Deserialize<List<MaintenanceReport>>(json, _jsonOptions) ?? new();
+                }
+                else
+                {
+                    ViewBag.Error = $"API returned {(int)response.StatusCode}. Please log in again if your session expired.";
+                }
             }
-            else
+            catch (Exception ex)
             {
-                ViewBag.Error = $"API returned {(int)response.StatusCode}. Please log in again if your session expired.";
+                ViewBag.Error = "Unable to load maintenance: " + ex.Message;
             }
             return View(requests);
         }
@@ -76,16 +90,23 @@ namespace PropertyLeasingReports.Controllers
         public async Task<IActionResult> Leases()
         {
             var leases = new List<LeaseReport>();
-            var client = GetAuthenticatedClient();
-            var response = await client.GetAsync("api/Leases");
-            if (response.IsSuccessStatusCode)
+            try
             {
-                var json = await response.Content.ReadAsStringAsync();
-                leases = JsonSerializer.Deserialize<List<LeaseReport>>(json, _jsonOptions) ?? new();
+                var client = GetAuthenticatedClient();
+                var response = await client.GetAsync("api/Leases");
+                if (response.IsSuccessStatusCode)
+                {
+                    var json = await response.Content.ReadAsStringAsync();
+                    leases = JsonSerializer.Deserialize<List<LeaseReport>>(json, _jsonOptions) ?? new();
+                }
+                else
+                {
+                    ViewBag.Error = $"API returned {(int)response.StatusCode}. Please log in again if your session expired.";
+                }
             }
-            else
+            catch (Exception ex)
             {
-                ViewBag.Error = $"API returned {(int)response.StatusCode}. Please log in again if your session expired.";
+                ViewBag.Error = "Unable to load leases: " + ex.Message;
             }
             return View(leases);
         }
@@ -93,16 +114,23 @@ namespace PropertyLeasingReports.Controllers
         public async Task<IActionResult> Payments()
         {
             var payments = new List<PaymentReport>();
-            var client = GetAuthenticatedClient();
-            var response = await client.GetAsync("api/Payments");
-            if (response.IsSuccessStatusCode)
+            try
             {
-                var json = await response.Content.ReadAsStringAsync();
-                payments = JsonSerializer.Deserialize<List<PaymentReport>>(json, _jsonOptions) ?? new();
+                var client = GetAuthenticatedClient();
+                var response = await client.GetAsync("api/Payments");
+                if (response.IsSuccessStatusCode)
+                {
+                    var json = await response.Content.ReadAsStringAsync();
+                    payments = JsonSerializer.Deserialize<List<PaymentReport>>(json, _jsonOptions) ?? new();
+                }
+                else
+                {
+                    ViewBag.Error = $"API returned {(int)response.StatusCode}. Please log in again if your session expired.";
+                }
             }
-            else
+            catch (Exception ex)
             {
-                ViewBag.Error = $"API returned {(int)response.StatusCode}. Please log in again if your session expired.";
+                ViewBag.Error = "Unable to load payments: " + ex.Message;
             }
             return View(payments);
         }

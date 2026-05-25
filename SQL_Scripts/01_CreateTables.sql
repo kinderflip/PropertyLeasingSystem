@@ -1,7 +1,6 @@
 -- Property Leasing System: schema
 -- Identity tables (AspNetUsers, AspNetRoles, ...) are created by EF Core.
 -- Run EF migrations first, then this script for the application tables.
-
 -- Properties
 -- A Property is either standalone (single rentable dwelling) or multi-unit (has Units).
 -- Standalone: Bedrooms, MonthlyRent, Status are filled in.

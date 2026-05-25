@@ -19,26 +19,64 @@ namespace PropertyLeasingAPI.Controllers
         }
 
         // GET: api/Leases
-        // C3: PropertyManager sees all; Tenant sees only their own; everyone else 403.
+        // PropertyManager sees all; Tenant sees only their own; everyone else 403.
+        // Returns a clean projection (no back-references) so JSON stays small and well-formed.
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Lease>>> GetLeases()
+        public async Task<IActionResult> GetLeases()
         {
-            var query = _context.Leases
-                .Include(l => l.Property)
-                .Include(l => l.Unit)
-                .Include(l => l.Tenant);
+            var baseQuery = _context.Leases.AsQueryable();
 
-            if (User.IsInRole("PropertyManager"))
-                return await query.ToListAsync();
-
-            if (User.IsInRole("Tenant"))
+            if (User.IsInRole("Tenant") && !User.IsInRole("PropertyManager"))
             {
                 var myTenantId = await GetCallerTenantId();
-                if (myTenantId == null) return Ok(new List<Lease>());
-                return await query.Where(l => l.TenantId == myTenantId).ToListAsync();
+                if (myTenantId == null) return Ok(new List<object>());
+                baseQuery = baseQuery.Where(l => l.TenantId == myTenantId);
+            }
+            else if (!User.IsInRole("PropertyManager"))
+            {
+                return Forbid();
             }
 
-            return Forbid();
+            var leases = await baseQuery
+                .Select(l => new
+                {
+                    leaseId = l.LeaseId,
+                    propertyId = l.PropertyId,
+                    unitId = l.UnitId,
+                    tenantId = l.TenantId,
+                    startDate = l.StartDate,
+                    endDate = l.EndDate,
+                    monthlyRent = l.MonthlyRent,
+                    status = l.Status,
+                    applicationDate = l.ApplicationDate,
+                    applicationNotes = l.ApplicationNotes,
+                    screeningNotes = l.ScreeningNotes,
+                    approvalDate = l.ApprovalDate,
+                    property = l.Property == null ? null : new
+                    {
+                        propertyId = l.Property.PropertyId,
+                        address = l.Property.Address,
+                        city = l.Property.City,
+                        propertyType = l.Property.PropertyType,
+                        status = l.Property.Status
+                    },
+                    unit = l.Unit == null ? null : new
+                    {
+                        unitId = l.Unit.UnitId,
+                        unitNumber = l.Unit.UnitNumber,
+                        monthlyRent = l.Unit.MonthlyRent
+                    },
+                    tenant = l.Tenant == null ? null : new
+                    {
+                        tenantId = l.Tenant.TenantId,
+                        fullName = l.Tenant.FullName,
+                        email = l.Tenant.Email,
+                        phone = l.Tenant.Phone
+                    }
+                })
+                .ToListAsync();
+
+            return Ok(leases);
         }
 
         // GET: api/Leases/5

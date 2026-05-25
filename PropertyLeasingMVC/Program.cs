@@ -38,37 +38,46 @@ builder.Services.ConfigureApplicationCookie(options =>
 
 var app = builder.Build();
 
-// Seed manager + staff users on startup
+// Seed manager + staff users on startup.
+// Wrapped in try/catch so a temporarily unavailable DB (Azure SQL Serverless can
+// auto-pause after idle time) doesn't crash the whole app on first boot.
 using (var scope = app.Services.CreateScope())
 {
-    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-
-    string adminEmail = "manager@property.com";
-    if (await userManager.FindByEmailAsync(adminEmail) == null)
+    try
     {
-        var adminUser = new ApplicationUser
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+
+        string adminEmail = "manager@property.com";
+        if (await userManager.FindByEmailAsync(adminEmail) == null)
         {
-            UserName = adminEmail,
-            Email = adminEmail,
-            FullName = "Ahmed Faisal",
-            EmailConfirmed = true
-        };
-        await userManager.CreateAsync(adminUser, "Manager123");
-        await userManager.AddToRoleAsync(adminUser, "PropertyManager");
+            var adminUser = new ApplicationUser
+            {
+                UserName = adminEmail,
+                Email = adminEmail,
+                FullName = "Ahmed Faisal",
+                EmailConfirmed = true
+            };
+            await userManager.CreateAsync(adminUser, "Manager123");
+            await userManager.AddToRoleAsync(adminUser, "PropertyManager");
+        }
+
+        string staffEmail = "staff@property.com";
+        if (await userManager.FindByEmailAsync(staffEmail) == null)
+        {
+            var staffUser = new ApplicationUser
+            {
+                UserName = staffEmail,
+                Email = staffEmail,
+                FullName = "Bader Hamed",
+                EmailConfirmed = true
+            };
+            await userManager.CreateAsync(staffUser, "Staff123");
+            await userManager.AddToRoleAsync(staffUser, "MaintenanceStaff");
+        }
     }
-
-    string staffEmail = "staff@property.com";
-    if (await userManager.FindByEmailAsync(staffEmail) == null)
+    catch (Exception ex)
     {
-        var staffUser = new ApplicationUser
-        {
-            UserName = staffEmail,
-            Email = staffEmail,
-            FullName = "Bader Hamed",
-            EmailConfirmed = true
-        };
-        await userManager.CreateAsync(staffUser, "Staff123");
-        await userManager.AddToRoleAsync(staffUser, "MaintenanceStaff");
+        Console.WriteLine("User seeding skipped: " + ex.Message);
     }
 }
 
