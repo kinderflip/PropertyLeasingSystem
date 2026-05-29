@@ -22,32 +22,46 @@ namespace PropertyLeasingAPI.Controllers
         // GET: api/MaintenanceRequests
         // C3: Manager → all; Tenant → own; MaintenanceStaff → assigned-to-them only.
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<MaintenanceRequest>>> GetMaintenanceRequests()
+        public async Task<IActionResult> GetMaintenanceRequests()
         {
-            var query = _context.MaintenanceRequests
-                .Include(m => m.Property)
-                .Include(m => m.Unit)
-                .Include(m => m.Tenant)
-                .Include(m => m.AssignedStaff)
-                .AsQueryable();
+            var query = _context.MaintenanceRequests.AsQueryable();
 
-            if (User.IsInRole("PropertyManager"))
-                return await query.ToListAsync();
-
-            if (User.IsInRole("MaintenanceStaff"))
-            {
-                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-                return await query.Where(m => m.AssignedStaffId == userId).ToListAsync();
-            }
-
-            if (User.IsInRole("Tenant"))
+            if (User.IsInRole("Tenant") && !User.IsInRole("PropertyManager"))
             {
                 var myTenantId = await GetCallerTenantId();
-                if (myTenantId == null) return Ok(new List<MaintenanceRequest>());
-                return await query.Where(m => m.TenantId == myTenantId).ToListAsync();
+                if (myTenantId == null) return Ok(new List<object>());
+                query = query.Where(m => m.TenantId == myTenantId);
+            }
+            else if (User.IsInRole("MaintenanceStaff") && !User.IsInRole("PropertyManager"))
+            {
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                query = query.Where(m => m.AssignedStaffId == userId);
+            }
+            else if (!User.IsInRole("PropertyManager"))
+            {
+                return Forbid();
             }
 
-            return Forbid();
+            var requests = await query
+                .Select(m => new
+                {
+                    requestId = m.RequestId,
+                    propertyId = m.PropertyId,
+                    unitId = m.UnitId,
+                    tenantId = m.TenantId,
+                    title = m.Title,
+                    description = m.Description,
+                    category = (int)m.Category,
+                    priority = (int)m.Priority,
+                    status = (int)m.Status,
+                    dateSubmitted = m.DateSubmitted,
+                    dateAssigned = m.DateAssigned,
+                    dateResolved = m.DateResolved,
+                    staffNotes = m.StaffNotes
+                })
+                .ToListAsync();
+
+            return Ok(requests);
         }
 
         // GET: api/MaintenanceRequests/5

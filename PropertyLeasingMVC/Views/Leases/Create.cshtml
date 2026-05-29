@@ -77,6 +77,8 @@
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
 
     <script>
+        var allUnits = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ViewBag.AllUnits ?? new object[0]));
+
         (function () {
             var $prop = document.getElementById('PropertyId');
             var $unit = document.getElementById('UnitId');
@@ -97,32 +99,29 @@
                     if ($help) $help.textContent = 'Required for multi-unit properties. Leave blank for standalone properties.';
                     return;
                 }
-                reset('-- Loading... --');
-                fetch('/Units/ForPropertyJson?propertyId=' + encodeURIComponent(propertyId))
-                    .then(function (r) { return r.ok ? r.json() : []; })
-                    .then(function (units) {
-                        if (!units || units.length === 0) {
-                            // Standalone property: hide the unit row
-                            reset('-- No units (standalone property) --');
-                            $row.style.display = 'none';
-                            $unit.value = '';
-                            if ($help) $help.textContent = 'Standalone property — no unit required.';
-                            return;
-                        }
-                        $row.style.display = '';
-                        var html = '<option value="">-- Select Unit --</option>';
-                        for (var i = 0; i < units.length; i++) {
-                            var u = units[i];
-                            var label = u.unitNumber + ' (' + u.unitType + ') - ' + Number(u.monthlyRent).toFixed(3) + ' BD';
-                            if (u.status && u.status !== 'Available') {
-                                label += ' [' + u.status + ']';
-                            }
-                            html += '<option value="' + u.unitId + '" data-rent="' + u.monthlyRent + '">' + label + '</option>';
-                        }
-                        $unit.innerHTML = html;
-                        if ($help) $help.textContent = 'Select a unit from this multi-unit property.';
-                    })
-                    .catch(function () { reset('-- Error loading units --'); });
+                var units = allUnits.filter(function (u) {
+                    return String(u.propertyId) === String(propertyId);
+                });
+                if (units.length === 0) {
+                    // Standalone property: hide the unit row
+                    reset('-- No units (standalone property) --');
+                    $row.style.display = 'none';
+                    $unit.value = '';
+                    if ($help) $help.textContent = 'Standalone property — no unit required.';
+                    return;
+                }
+                $row.style.display = '';
+                var html = '<option value="">-- Select Unit --</option>';
+                for (var i = 0; i < units.length; i++) {
+                    var u = units[i];
+                    var label = u.unitNumber + ' (' + u.unitType + ') - ' + Number(u.monthlyRent).toFixed(3) + ' BD';
+                    if (u.status && u.status !== 'Available') {
+                        label += ' [' + u.status + ']';
+                    }
+                    html += '<option value="' + u.unitId + '" data-rent="' + u.monthlyRent + '">' + label + '</option>';
+                }
+                $unit.innerHTML = html;
+                if ($help) $help.textContent = 'Select a unit from this multi-unit property.';
             }
 
             $prop.addEventListener('change', function () {

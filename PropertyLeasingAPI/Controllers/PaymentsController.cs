@@ -22,26 +22,38 @@ namespace PropertyLeasingAPI.Controllers
         // GET: api/Payments
         // C3: PropertyManager sees all; Tenant sees only payments on their own leases.
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Payment>>> GetPayments()
+        public async Task<IActionResult> GetPayments()
         {
             await FlagOverduePayments();
 
-            var query = _context.Payments
-                .Include(p => p.Lease)
-                .OrderByDescending(p => p.DueDate)
-                .AsQueryable();
+            var query = _context.Payments.AsQueryable();
 
-            if (User.IsInRole("PropertyManager"))
-                return await query.ToListAsync();
-
-            if (User.IsInRole("Tenant"))
+            if (User.IsInRole("Tenant") && !User.IsInRole("PropertyManager"))
             {
                 var myTenantId = await GetCallerTenantId();
-                if (myTenantId == null) return Ok(new List<Payment>());
-                return await query.Where(p => p.Lease!.TenantId == myTenantId).ToListAsync();
+                if (myTenantId == null) return Ok(new List<object>());
+                query = query.Where(p => p.Lease!.TenantId == myTenantId);
+            }
+            else if (!User.IsInRole("PropertyManager"))
+            {
+                return Forbid();
             }
 
-            return Forbid();
+            var payments = await query
+                .OrderByDescending(p => p.DueDate)
+                .Select(p => new
+                {
+                    paymentId = p.PaymentId,
+                    leaseId = p.LeaseId,
+                    amount = p.Amount,
+                    dueDate = p.DueDate,
+                    paymentDate = p.PaymentDate,
+                    paymentType = (int)p.PaymentType,
+                    status = (int)p.Status
+                })
+                .ToListAsync();
+
+            return Ok(payments);
         }
 
         // GET: api/Payments/5

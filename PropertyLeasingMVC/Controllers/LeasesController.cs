@@ -380,6 +380,19 @@ namespace PropertyLeasingMVC.Controllers
 
             ViewData["PropertyId"] = new SelectList(availableProperties, "PropertyId", "Address", selectedProperty);
             ViewData["TenantId"] = new SelectList(_context.Tenants, "TenantId", "FullName", selectedTenant);
+
+            ViewBag.AllUnits = _context.Units
+                .OrderBy(u => u.UnitNumber)
+                .Select(u => new
+                {
+                    unitId = u.UnitId,
+                    propertyId = u.PropertyId,
+                    unitNumber = u.UnitNumber,
+                    unitType = u.UnitType.ToString(),
+                    monthlyRent = u.MonthlyRent,
+                    status = u.Status.ToString()
+                })
+                .ToList();
         }
 
         // Multi-unit => must set UnitId. Standalone => must leave UnitId null.

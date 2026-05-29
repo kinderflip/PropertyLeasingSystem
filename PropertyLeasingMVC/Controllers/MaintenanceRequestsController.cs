@@ -213,6 +213,7 @@ namespace PropertyLeasingMVC.Controllers
         {
             ViewData["PropertyId"] = new SelectList(_context.Properties, "PropertyId", "Address");
             ViewData["TenantId"] = new SelectList(_context.Tenants, "TenantId", "FullName");
+            PopulateAllUnits();
             return View();
         }
 
@@ -244,6 +245,7 @@ namespace PropertyLeasingMVC.Controllers
             }
             ViewData["PropertyId"] = new SelectList(_context.Properties, "PropertyId", "Address", maintenanceRequest.PropertyId);
             ViewData["TenantId"] = new SelectList(_context.Tenants, "TenantId", "FullName", maintenanceRequest.TenantId);
+            PopulateAllUnits();
             return View(maintenanceRequest);
         }
 
@@ -262,6 +264,7 @@ namespace PropertyLeasingMVC.Controllers
             var staffUsers = await _userManager.GetUsersInRoleAsync("MaintenanceStaff");
             ViewData["AssignedStaffId"] = new SelectList(staffUsers, "Id", "FullName", maintenanceRequest.AssignedStaffId);
 
+            PopulateAllUnits();
             return View(maintenanceRequest);
         }
 
@@ -336,6 +339,7 @@ namespace PropertyLeasingMVC.Controllers
             var staffList = await _userManager.GetUsersInRoleAsync("MaintenanceStaff");
             ViewData["AssignedStaffId"] = new SelectList(staffList, "Id", "FullName", maintenanceRequest.AssignedStaffId);
 
+            PopulateAllUnits();
             return View(maintenanceRequest);
         }
 
@@ -377,6 +381,22 @@ namespace PropertyLeasingMVC.Controllers
         private bool MaintenanceRequestExists(int id)
         {
             return _context.MaintenanceRequests.Any(e => e.RequestId == id);
+        }
+
+        private void PopulateAllUnits()
+        {
+            ViewBag.AllUnits = _context.Units
+                .OrderBy(u => u.UnitNumber)
+                .Select(u => new
+                {
+                    unitId = u.UnitId,
+                    propertyId = u.PropertyId,
+                    unitNumber = u.UnitNumber,
+                    unitType = u.UnitType.ToString(),
+                    monthlyRent = u.MonthlyRent,
+                    status = u.Status.ToString()
+                })
+                .ToList();
         }
 
         // Multi-unit => must set UnitId. Standalone => must leave UnitId null.

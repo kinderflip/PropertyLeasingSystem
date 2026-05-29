@@ -56,10 +56,6 @@ namespace PropertyLeasingReports.Controllers
                             return View();
                         }
 
-                        HttpContext.Session.SetString("JwtToken", result.Token);
-                        HttpContext.Session.SetString("UserEmail", result.Email);
-                        HttpContext.Session.SetString("FullName", result.FullName);
-
                         var claims = new List<Claim>
                         {
                             new Claim(ClaimTypes.Name, result.Email),
@@ -72,9 +68,19 @@ namespace PropertyLeasingReports.Controllers
                         var identity = new ClaimsIdentity(claims,
                             CookieAuthenticationDefaults.AuthenticationScheme);
 
+                        var authProperties = new AuthenticationProperties
+                        {
+                            IsPersistent = false
+                        };
+                        authProperties.StoreTokens(new[]
+                        {
+                            new AuthenticationToken { Name = "access_token", Value = result.Token }
+                        });
+
                         await HttpContext.SignInAsync(
                             CookieAuthenticationDefaults.AuthenticationScheme,
-                            new ClaimsPrincipal(identity));
+                            new ClaimsPrincipal(identity),
+                            authProperties);
 
                         return RedirectToAction("Index", "Home");
                     }
@@ -96,7 +102,6 @@ namespace PropertyLeasingReports.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Logout()
         {
-            HttpContext.Session.Clear();
             await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
             return RedirectToAction("Login");
         }

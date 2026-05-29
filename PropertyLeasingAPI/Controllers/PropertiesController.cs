@@ -20,11 +20,35 @@ namespace PropertyLeasingAPI.Controllers
 
         // GET: api/Properties
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Property>>> GetProperties()
+        public async Task<IActionResult> GetProperties()
         {
-            return await _context.Properties
-                .Include(p => p.Units)
+            var properties = await _context.Properties
+                .Select(p => new
+                {
+                    propertyId = p.PropertyId,
+                    address = p.Address,
+                    city = p.City,
+                    propertyType = (int)p.PropertyType,
+                    bedrooms = p.Bedrooms,
+                    monthlyRent = p.MonthlyRent,
+                    status = p.Status == null ? (int?)null : (int)p.Status,
+                    description = p.Description,
+                    units = p.Units.Select(u => new
+                    {
+                        unitId = u.UnitId,
+                        propertyId = u.PropertyId,
+                        unitNumber = u.UnitNumber,
+                        unitType = (int)u.UnitType,
+                        amenities = u.Amenities,
+                        sizeSqm = u.SizeSqm,
+                        monthlyRent = u.MonthlyRent,
+                        status = (int)u.Status,
+                        description = u.Description
+                    }).ToList()
+                })
                 .ToListAsync();
+
+            return Ok(properties);
         }
 
         // GET: api/Properties/5

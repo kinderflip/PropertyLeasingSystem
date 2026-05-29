@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Net.Http.Headers;
@@ -17,10 +18,10 @@ namespace PropertyLeasingReports.Controllers
             _httpClientFactory = httpClientFactory;
         }
 
-        private HttpClient GetAuthenticatedClient()
+        private async Task<HttpClient> GetAuthenticatedClient()
         {
             var client = _httpClientFactory.CreateClient("PropertyAPI");
-            var token = HttpContext.Session.GetString("JwtToken");
+            var token = await HttpContext.GetTokenAsync("access_token");
             if (!string.IsNullOrEmpty(token))
                 client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
             return client;
@@ -31,7 +32,7 @@ namespace PropertyLeasingReports.Controllers
             var vm = new PropertiesReportViewModel();
             try
             {
-                var client = GetAuthenticatedClient();
+                var client = await GetAuthenticatedClient();
                 var response = await client.GetAsync("api/Properties");
                 if (response.IsSuccessStatusCode)
                 {
@@ -68,7 +69,7 @@ namespace PropertyLeasingReports.Controllers
             var requests = new List<MaintenanceReport>();
             try
             {
-                var client = GetAuthenticatedClient();
+                var client = await GetAuthenticatedClient();
                 var response = await client.GetAsync("api/MaintenanceRequests");
                 if (response.IsSuccessStatusCode)
                 {
@@ -92,7 +93,7 @@ namespace PropertyLeasingReports.Controllers
             var leases = new List<LeaseReport>();
             try
             {
-                var client = GetAuthenticatedClient();
+                var client = await GetAuthenticatedClient();
                 var response = await client.GetAsync("api/Leases");
                 if (response.IsSuccessStatusCode)
                 {
@@ -116,7 +117,7 @@ namespace PropertyLeasingReports.Controllers
             var payments = new List<PaymentReport>();
             try
             {
-                var client = GetAuthenticatedClient();
+                var client = await GetAuthenticatedClient();
                 var response = await client.GetAsync("api/Payments");
                 if (response.IsSuccessStatusCode)
                 {
