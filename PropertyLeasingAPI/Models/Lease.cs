@@ -32,9 +32,7 @@ namespace PropertyLeasingAPI.Models
         [Display(Name = "End Date")]
         public DateTime EndDate { get; set; }
 
-        [Required]
         [Column(TypeName = "decimal(10,2)")]
-        [Range(0.01, 999999.99)]
         [Display(Name = "Monthly Rent")]
         public decimal MonthlyRent { get; set; }
 

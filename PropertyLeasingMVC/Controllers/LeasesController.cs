@@ -100,8 +100,7 @@ namespace PropertyLeasingMVC.Controllers
         [Authorize(Roles = "PropertyManager,Tenant")]
         public async Task<IActionResult> Create([Bind("LeaseId,PropertyId,UnitId,TenantId,StartDate,EndDate,MonthlyRent,ApplicationNotes")] Lease lease)
         {
-            // L1: auto-fill MonthlyRent from the chosen Unit/Property BEFORE the
-            // [Range(0.01, ...)] attribute can reject a 0/empty submission.
+            // Auto-fill MonthlyRent from the chosen Unit/Property when missing.
             if (lease.MonthlyRent <= 0)
             {
                 if (lease.UnitId.HasValue)
@@ -116,10 +115,10 @@ namespace PropertyLeasingMVC.Controllers
                         .FirstOrDefaultAsync(p => p.PropertyId == lease.PropertyId);
                     if (prop?.MonthlyRent != null) lease.MonthlyRent = prop.MonthlyRent.Value;
                 }
-                // Drop the binding-time Range error now that we've supplied a real value.
-                if (lease.MonthlyRent > 0)
-                    ModelState.Remove(nameof(Lease.MonthlyRent));
             }
+
+            if (lease.MonthlyRent <= 0)
+                ModelState.AddModelError(nameof(Lease.MonthlyRent), "Monthly rent must be greater than 0.");
 
             // Validate unit vs standalone (multi-unit must have UnitId, standalone must not)
             var validationError = await ValidateUnitVsStandalone(lease);

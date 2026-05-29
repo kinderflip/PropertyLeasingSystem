@@ -132,7 +132,7 @@ namespace PropertyLeasingAPI.Controllers
         [Authorize(Roles = "PropertyManager,Tenant")]
         public async Task<ActionResult<Lease>> PostLease(Lease lease)
         {
-            // L1: auto-fill MonthlyRent BEFORE [Range(0.01, ...)] can reject a 0 value.
+            // Auto-fill MonthlyRent from the chosen Unit/Property when missing.
             if (lease.MonthlyRent <= 0)
             {
                 if (lease.UnitId.HasValue)
@@ -147,9 +147,10 @@ namespace PropertyLeasingAPI.Controllers
                         .FirstOrDefaultAsync(p => p.PropertyId == lease.PropertyId);
                     if (prop?.MonthlyRent != null) lease.MonthlyRent = prop.MonthlyRent.Value;
                 }
-                if (lease.MonthlyRent > 0)
-                    ModelState.Remove(nameof(Lease.MonthlyRent));
             }
+
+            if (lease.MonthlyRent <= 0)
+                ModelState.AddModelError(nameof(Lease.MonthlyRent), "Monthly rent must be greater than 0.");
 
             if (!ModelState.IsValid) return BadRequest(ModelState);
 
