@@ -32,7 +32,7 @@ namespace PropertyLeasingMVC.Controllers
                 properties = properties.Where(p =>
                     p.Address.Contains(searchString) ||
                     p.City.Contains(searchString) ||
-                    p.Description!.Contains(searchString));
+                    (p.Description != null && p.Description.Contains(searchString)));
 
             if (status.HasValue)
                 properties = properties.Where(p => p.Status == status);

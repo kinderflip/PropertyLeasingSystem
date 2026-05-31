@@ -41,6 +41,16 @@ namespace PropertyLeasingMVC.Controllers
                 .Include(m => m.AssignedStaff)
                 .AsQueryable();
 
+            // A Tenant's "My Requests" must only show their own tickets, not everyone's.
+            // Managers and maintenance staff keep the full board.
+            if (User.IsInRole("Tenant") && !User.IsInRole("PropertyManager") && !User.IsInRole("MaintenanceStaff"))
+            {
+                var userId = _userManager.GetUserId(User);
+                var myTenant = await _context.Tenants.FirstOrDefaultAsync(t => t.UserId == userId);
+                var myTenantId = myTenant?.TenantId ?? -1;
+                requests = requests.Where(m => m.TenantId == myTenantId);
+            }
+
             if (!string.IsNullOrEmpty(searchString))
                 requests = requests.Where(m =>
                     m.Title.Contains(searchString) ||
@@ -223,6 +233,23 @@ namespace PropertyLeasingMVC.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("RequestId,PropertyId,UnitId,TenantId,Title,Description,Category,Priority")] MaintenanceRequest maintenanceRequest)
         {
+            // A Tenant may only submit requests under their own name — override any posted TenantId.
+            if (User.IsInRole("Tenant") && !User.IsInRole("PropertyManager"))
+            {
+                var userId = _userManager.GetUserId(User);
+                var myTenant = await _context.Tenants.FirstOrDefaultAsync(t => t.UserId == userId);
+                if (myTenant == null)
+                {
+                    ModelState.AddModelError(string.Empty, "Your account is not linked to a tenant profile. Contact the property manager.");
+                }
+                else
+                {
+                    maintenanceRequest.TenantId = myTenant.TenantId;
+                    // The tenant form doesn't post TenantId, so clear its "required" model error.
+                    ModelState.Remove(nameof(MaintenanceRequest.TenantId));
+                }
+            }
+
             var validationError = await ValidateUnitVsStandalone(maintenanceRequest);
             if (validationError != null)
                 ModelState.AddModelError("UnitId", validationError);

@@ -18,7 +18,8 @@ namespace PropertyLeasingMVC.Controllers
             _context = context;
         }
 
-        // GET: Units?propertyId=1
+        // GET: Units?propertyId=1 — internal management list. Public browsing uses Browse.
+        [Authorize(Roles = "PropertyManager")]
         public async Task<IActionResult> Index(int? propertyId, UnitStatus? status, UnitType? type)
         {
             var units = _context.Units.Include(u => u.Property).AsQueryable();

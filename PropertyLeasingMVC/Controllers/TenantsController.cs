@@ -21,13 +21,15 @@ namespace PropertyLeasingMVC.Controllers
             _context = context;
         }
 
-        // GET: Tenants
+        // GET: Tenants — PII (National ID, email, phone). Manager-only.
+        [Authorize(Roles = "PropertyManager")]
         public async Task<IActionResult> Index(int page = 1)
         {
             return View(await _context.Tenants.OrderBy(t => t.FullName).ToListAsync());
         }
 
-        // GET: Tenants/Details/5
+        // GET: Tenants/Details/5 — PII. Manager-only.
+        [Authorize(Roles = "PropertyManager")]
         public async Task<IActionResult> Details(int? id)
         {
             if (id == null)
@@ -128,11 +130,29 @@ namespace PropertyLeasingMVC.Controllers
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
             var tenant = await _context.Tenants.FindAsync(id);
-            if (tenant != null)
+            if (tenant == null)
             {
-                _context.Tenants.Remove(tenant);
+                TempData["ErrorMessage"] = "Tenant not found.";
+                return RedirectToAction(nameof(Index));
             }
 
+            // Mirror the Properties/Units guard: a tenant with lease or maintenance
+            // history can't be deleted (FK constraints would otherwise fail or cascade).
+            var blockingLeases = await _context.Leases.AnyAsync(l => l.TenantId == id);
+            if (blockingLeases)
+            {
+                TempData["ErrorMessage"] = "Cannot delete this tenant — they still have lease records. Remove the leases first.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            var blockingRequests = await _context.MaintenanceRequests.AnyAsync(m => m.TenantId == id);
+            if (blockingRequests)
+            {
+                TempData["ErrorMessage"] = "Cannot delete this tenant — they still have maintenance request history.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            _context.Tenants.Remove(tenant);
             await _context.SaveChangesAsync();
             TempData["SuccessMessage"] = "Tenant deleted successfully!";
             return RedirectToAction(nameof(Index));

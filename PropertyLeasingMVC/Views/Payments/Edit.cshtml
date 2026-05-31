@@ -55,6 +55,15 @@
                         <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
                     </div>
                 </form>
+
+                @if (Model.Status != PropertyLeasingAPI.Models.PaymentStatus.Completed)
+                {
+                    <hr />
+                    <form asp-action="MarkAsPaid" asp-route-id="@Model.PaymentId" method="post">
+                        <button type="submit" class="btn btn-success">Mark as Paid (today)</button>
+                        <span class="text-muted small ms-2">Sets status to Completed and records today's date.</span>
+                    </form>
+                }
             </div>
         </div>
     </div>

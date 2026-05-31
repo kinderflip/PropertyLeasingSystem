@@ -53,7 +53,8 @@ namespace PropertyLeasingMVC.Controllers
             return View("Index", await query.ToListAsync());
         }
 
-        // GET: Payments
+        // GET: Payments — full ledger is a manager tool. Tenants use MyPayments instead.
+        [Authorize(Roles = "PropertyManager")]
         public async Task<IActionResult> Index(string? searchString, PaymentStatus? status, PaymentType? type)
         {
             // Auto-flag overdue payments (normalise DueDate to date-only to avoid off-by-one)
@@ -108,6 +109,17 @@ namespace PropertyLeasingMVC.Controllers
 
             if (payment == null) return NotFound();
 
+            // A Tenant may only open a payment on their own lease.
+            if (!User.IsInRole("PropertyManager"))
+            {
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                var tenant = string.IsNullOrEmpty(userId)
+                    ? null
+                    : await _context.Tenants.FirstOrDefaultAsync(t => t.UserId == userId);
+                if (tenant == null || payment.Lease?.TenantId != tenant.TenantId)
+                    return Forbid();
+            }
+
             return View(payment);
         }
 
@@ -131,11 +143,17 @@ namespace PropertyLeasingMVC.Controllers
         [Authorize(Roles = "PropertyManager")]
         public async Task<IActionResult> Create([Bind("PaymentId,LeaseId,Amount,DueDate,PaymentDate,PaymentType,Status")] Payment payment)
         {
+            // A payment can't have been made in the future.
+            if (payment.PaymentDate.HasValue && payment.PaymentDate.Value.Date > DateTime.Today)
+                ModelState.AddModelError(nameof(Payment.PaymentDate), "Payment date cannot be in the future.");
+
             if (ModelState.IsValid)
             {
-                // If payment date is set, mark as completed
+                // Keep Status and PaymentDate consistent in both directions.
                 if (payment.PaymentDate.HasValue)
                     payment.Status = PaymentStatus.Completed;
+                else if (payment.Status == PaymentStatus.Completed)
+                    payment.PaymentDate = DateTime.Today;
 
                 _context.Add(payment);
                 await _context.SaveChangesAsync();
@@ -208,13 +226,20 @@ namespace PropertyLeasingMVC.Controllers
         {
             if (id != payment.PaymentId) return NotFound();
 
+            // A payment can't have been made in the future.
+            if (payment.PaymentDate.HasValue && payment.PaymentDate.Value.Date > DateTime.Today)
+                ModelState.AddModelError(nameof(Payment.PaymentDate), "Payment date cannot be in the future.");
+
             if (ModelState.IsValid)
             {
                 try
                 {
-                    // Auto-complete if payment date is set
-                    if (payment.PaymentDate.HasValue && payment.Status == PaymentStatus.Pending)
+                    // Keep Status and PaymentDate consistent in both directions:
+                    // a date implies Completed, and Completed without a date defaults to today.
+                    if (payment.PaymentDate.HasValue)
                         payment.Status = PaymentStatus.Completed;
+                    else if (payment.Status == PaymentStatus.Completed)
+                        payment.PaymentDate = DateTime.Today;
 
                     _context.Update(payment);
                     await _context.SaveChangesAsync();

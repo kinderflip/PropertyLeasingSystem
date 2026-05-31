@@ -23,45 +23,55 @@
 }
 else
 {
-    <div class="list-group shadow-sm">
-        @foreach (var notification in Model)
-        {
-            var bgClass = notification.IsRead ? "" : "list-group-item-light border-start border-primary border-4";
-            var typeIcon = notification.Type switch
-            {
-                PropertyLeasingAPI.Models.NotificationType.LeaseUpdate => "bg-dark",
-                PropertyLeasingAPI.Models.NotificationType.MaintenanceUpdate => "bg-danger",
-                PropertyLeasingAPI.Models.NotificationType.PaymentReminder => "bg-success",
-                _ => "bg-secondary"
-            };
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <table class="table table-hover mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Type</th>
+                        <th>Notification</th>
+                        <th>Date</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var notification in Model)
+                    {
+                        var rowClass = notification.IsRead ? "" : "table-light";
+                        var typeIcon = notification.Type switch
+                        {
+                            PropertyLeasingAPI.Models.NotificationType.LeaseUpdate => "bg-dark",
+                            PropertyLeasingAPI.Models.NotificationType.MaintenanceUpdate => "bg-danger",
+                            PropertyLeasingAPI.Models.NotificationType.PaymentReminder => "bg-success",
+                            _ => "bg-secondary"
+                        };
 
-            <div class="list-group-item @bgClass">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div class="d-flex align-items-start">
-                        <span class="badge @typeIcon me-3 mt-1">@notification.Type</span>
-                        <div>
-                            <h6 class="mb-1 @(notification.IsRead ? "text-muted" : "fw-bold")">@notification.Title</h6>
-                            <p class="mb-1 small">@notification.Message</p>
-                            <small class="text-muted">@notification.CreatedAt.ToString("dd MMM yyyy HH:mm")</small>
-                        </div>
-                    </div>
-                    <div>
-                        @if (!notification.IsRead)
-                        {
-                            <form asp-action="MarkAsRead" method="post" class="d-inline">
-                                <input type="hidden" name="id" value="@notification.NotificationId" />
-                                <button type="submit" class="btn btn-sm btn-outline-primary">
-                                    @(notification.LinkUrl != null ? "View" : "Mark Read")
-                                </button>
-                            </form>
-                        }
-                        else if (notification.LinkUrl != null)
-                        {
-                            <a href="@notification.LinkUrl" class="btn btn-sm btn-outline-secondary">View</a>
-                        }
-                    </div>
-                </div>
-            </div>
-        }
+                        <tr class="@rowClass">
+                            <td><span class="badge @typeIcon">@notification.Type</span></td>
+                            <td>
+                                <div class="@(notification.IsRead ? "text-muted" : "fw-bold")">@notification.Title</div>
+                                <div class="small text-muted">@notification.Message</div>
+                            </td>
+                            <td>@notification.CreatedAt.ToString("dd MMM yyyy HH:mm")</td>
+                            <td>
+                                @if (!notification.IsRead)
+                                {
+                                    <form asp-action="MarkAsRead" method="post" class="d-inline">
+                                        <input type="hidden" name="id" value="@notification.NotificationId" />
+                                        <button type="submit" class="btn btn-sm btn-outline-primary">
+                                            @(notification.LinkUrl != null ? "View" : "Mark Read")
+                                        </button>
+                                    </form>
+                                }
+                                else if (notification.LinkUrl != null)
+                                {
+                                    <a href="@notification.LinkUrl" class="btn btn-sm btn-outline-secondary">View</a>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
     </div>
 }

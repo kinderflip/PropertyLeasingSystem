@@ -27,6 +27,7 @@ namespace PropertyLeasingMVC.Controllers
         [Authorize(Roles = "PropertyManager,Tenant")]
         public async Task<IActionResult> MyLeases(int page = 1)
         {
+            ViewBag.MyView = true;
             var userId = User.FindFirstValue(System.Security.Claims.ClaimTypes.NameIdentifier);
             var emptyPage = new List<Lease>();
 
@@ -46,7 +47,8 @@ namespace PropertyLeasingMVC.Controllers
             return View("Index", await query.ToListAsync());
         }
 
-        // GET: Leases
+        // GET: Leases — full list is a manager tool. Tenants use MyLeases instead.
+        [Authorize(Roles = "PropertyManager")]
         public async Task<IActionResult> Index(string? searchString, LeaseStatus? status)
         {
             var leases = _context.Leases
@@ -70,7 +72,7 @@ namespace PropertyLeasingMVC.Controllers
             return View(await leases.OrderByDescending(l => l.ApplicationDate).ToListAsync());
         }
 
-        // GET: Leases/Details/5
+        // GET: Leases/Details/5 — a Tenant may only open their own lease.
         public async Task<IActionResult> Details(int? id)
         {
             if (id == null) return NotFound();
@@ -83,7 +85,20 @@ namespace PropertyLeasingMVC.Controllers
 
             if (lease == null) return NotFound();
 
+            if (!await CanAccessTenantData(lease.TenantId)) return Forbid();
+
             return View(lease);
+        }
+
+        // Ownership gate: PropertyManager sees everything; anyone else may only
+        // access rows belonging to their own linked tenant profile.
+        private async Task<bool> CanAccessTenantData(int tenantId)
+        {
+            if (User.IsInRole("PropertyManager")) return true;
+            var userId = User.FindFirstValue(System.Security.Claims.ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId)) return false;
+            var tenant = await _context.Tenants.FirstOrDefaultAsync(t => t.UserId == userId);
+            return tenant != null && tenant.TenantId == tenantId;
         }
 
         // GET: Leases/Apply - Tenant submits a lease application
@@ -100,6 +115,23 @@ namespace PropertyLeasingMVC.Controllers
         [Authorize(Roles = "PropertyManager,Tenant")]
         public async Task<IActionResult> Create([Bind("LeaseId,PropertyId,UnitId,TenantId,StartDate,EndDate,MonthlyRent,ApplicationNotes")] Lease lease)
         {
+            // A Tenant may only apply on their own behalf — override any posted TenantId.
+            if (User.IsInRole("Tenant") && !User.IsInRole("PropertyManager"))
+            {
+                var userId = User.FindFirstValue(System.Security.Claims.ClaimTypes.NameIdentifier);
+                var myTenant = await _context.Tenants.FirstOrDefaultAsync(t => t.UserId == userId);
+                if (myTenant == null)
+                {
+                    ModelState.AddModelError(string.Empty, "Your account is not linked to a tenant profile. Contact the property manager.");
+                }
+                else
+                {
+                    lease.TenantId = myTenant.TenantId;
+                    // The tenant form doesn't post TenantId, so clear its "required" model error.
+                    ModelState.Remove(nameof(Lease.TenantId));
+                }
+            }
+
             // Auto-fill MonthlyRent from the chosen Unit/Property when missing.
             if (lease.MonthlyRent <= 0)
             {
@@ -348,13 +380,26 @@ namespace PropertyLeasingMVC.Controllers
                 .FirstOrDefaultAsync(l => l.LeaseId == id);
             if (lease != null)
             {
-                // If deleting an active lease, make the unit/property available again
+                // If deleting an active lease, free the unit/property — but only when no
+                // OTHER active lease still occupies it (avoids wrongly flipping to Available).
                 if (lease.Status == LeaseStatus.Active)
                 {
                     if (lease.Unit != null)
-                        lease.Unit.Status = UnitStatus.Available;
+                    {
+                        var otherActiveOnUnit = await _context.Leases.AnyAsync(l =>
+                            l.LeaseId != lease.LeaseId && l.UnitId == lease.UnitId &&
+                            l.Status == LeaseStatus.Active);
+                        if (!otherActiveOnUnit)
+                            lease.Unit.Status = UnitStatus.Available;
+                    }
                     else if (lease.Property != null)
-                        lease.Property.Status = PropertyStatus.Available;
+                    {
+                        var otherActiveOnProperty = await _context.Leases.AnyAsync(l =>
+                            l.LeaseId != lease.LeaseId && l.PropertyId == lease.PropertyId &&
+                            l.UnitId == null && l.Status == LeaseStatus.Active);
+                        if (!otherActiveOnProperty)
+                            lease.Property.Status = PropertyStatus.Available;
+                    }
                 }
 
                 _context.Leases.Remove(lease);

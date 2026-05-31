@@ -28,13 +28,17 @@
                 <span asp-validation-for="UnitId" class="text-danger"></span>
             </div>
 
-            <div class="mb-3">
-                <label asp-for="TenantId" class="form-label">Tenant</label>
-                <select asp-for="TenantId" asp-items="ViewBag.TenantId" class="form-control">
-                    <option value="">-- Select Tenant --</option>
-                </select>
-                <span asp-validation-for="TenantId" class="text-danger"></span>
-            </div>
+            @* Managers choose the tenant; a tenant submits on their own behalf (server sets the id). *@
+            @if (User.IsInRole("PropertyManager"))
+            {
+                <div class="mb-3">
+                    <label asp-for="TenantId" class="form-label">Tenant</label>
+                    <select asp-for="TenantId" asp-items="ViewBag.TenantId" class="form-control">
+                        <option value="">-- Select Tenant --</option>
+                    </select>
+                    <span asp-validation-for="TenantId" class="text-danger"></span>
+                </div>
+            }
 
             <div class="mb-3">
                 <label asp-for="Title" class="form-label"></label>

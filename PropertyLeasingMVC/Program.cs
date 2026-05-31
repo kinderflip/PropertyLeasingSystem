@@ -38,7 +38,7 @@ builder.Services.ConfigureApplicationCookie(options =>
 
 var app = builder.Build();
 
-// Seed manager + staff users on startup.
+// Seed manager + staff + tenant demo users on startup.
 // Wrapped in try/catch so a temporarily unavailable DB (Azure SQL Serverless can
 // auto-pause after idle time) doesn't crash the whole app on first boot.
 using (var scope = app.Services.CreateScope())
@@ -73,6 +73,33 @@ using (var scope = app.Services.CreateScope())
             };
             await userManager.CreateAsync(staffUser, "Staff123");
             await userManager.AddToRoleAsync(staffUser, "MaintenanceStaff");
+        }
+
+        string tenantEmail = "tenant@property.com";
+        if (await userManager.FindByEmailAsync(tenantEmail) == null)
+        {
+            var tenantUser = new ApplicationUser
+            {
+                UserName = tenantEmail,
+                Email = tenantEmail,
+                FullName = "Ahmed Hassan",
+                EmailConfirmed = true
+            };
+            var result = await userManager.CreateAsync(tenantUser, "Tenant123");
+            if (result.Succeeded)
+            {
+                await userManager.AddToRoleAsync(tenantUser, "Tenant");
+
+                // Link the demo login to an existing tenant profile so MyLeases /
+                // MyPayments / My Requests and the ownership checks resolve to real data.
+                var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                var profile = await dbContext.Tenants.FirstOrDefaultAsync(t => t.TenantId == 1);
+                if (profile != null && profile.UserId == null)
+                {
+                    profile.UserId = tenantUser.Id;
+                    await dbContext.SaveChangesAsync();
+                }
+            }
         }
     }
     catch (Exception ex)

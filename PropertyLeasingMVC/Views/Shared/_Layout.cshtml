@@ -43,20 +43,8 @@
                                 <a class="nav-link" asp-controller="Properties" asp-action="Index">Properties</a>
                             </li>
 
-                            @* M5: Tenant role only sees their own data via dedicated actions. *@
-                            @if (User.IsInRole("Tenant") && !User.IsInRole("PropertyManager"))
-                            {
-                                <li class="nav-item">
-                                    <a class="nav-link" asp-controller="Leases" asp-action="MyLeases">My Leases</a>
-                                </li>
-                                <li class="nav-item">
-                                    <a class="nav-link" asp-controller="Payments" asp-action="MyPayments">My Payments</a>
-                                </li>
-                                <li class="nav-item">
-                                    <a class="nav-link" asp-controller="MaintenanceRequests" asp-action="Index">My Requests</a>
-                                </li>
-                            }
-                            else
+                            @* Role-scoped nav: each role only sees links it is authorized to use. *@
+                            @if (User.IsInRole("PropertyManager"))
                             {
                                 <li class="nav-item">
                                     <a class="nav-link" asp-controller="Units" asp-action="Index">Units</a>
@@ -72,6 +60,26 @@
                                 </li>
                                 <li class="nav-item">
                                     <a class="nav-link" asp-controller="Payments" asp-action="Index">Payments</a>
+                                </li>
+                            }
+                            else if (User.IsInRole("MaintenanceStaff"))
+                            {
+                                @* M5: staff only get the maintenance board, not leasing/tenant data. *@
+                                <li class="nav-item">
+                                    <a class="nav-link" asp-controller="MaintenanceRequests" asp-action="Index">Maintenance</a>
+                                </li>
+                            }
+                            else if (User.IsInRole("Tenant"))
+                            {
+                                @* M5: Tenant role only sees their own data via dedicated actions. *@
+                                <li class="nav-item">
+                                    <a class="nav-link" asp-controller="Leases" asp-action="MyLeases">My Leases</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" asp-controller="Payments" asp-action="MyPayments">My Payments</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" asp-controller="MaintenanceRequests" asp-action="Index">My Requests</a>
                                 </li>
                             }
                             <li class="nav-item">
